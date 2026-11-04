@@ -53,7 +53,6 @@ export default function SettlementPage() {
             href="/deals/dd-1048/negotiation"
           />
           <Tab label="Settlement" active />
-          <Tab label="Activity" />
         </div>
 
         {/* Heading */}
@@ -69,8 +68,8 @@ export default function SettlementPage() {
           </div>
 
           <div className="rounded-[9px] bg-[#FCEAF5] px-4 py-2 text-[13px] font-semibold text-[#E14999]">
-            Proposed settlement · $15,930.00
-          </div>
+  Final agreement · awaiting approvals
+</div>
         </div>
 
         {/* Main upper grid */}
@@ -115,7 +114,7 @@ export default function SettlementPage() {
           </p>
 
           <p className="mt-1 text-[11px] text-[#A09AA7]">
-            Source: DN-11000 · Oct 15
+            Source: DN-11000
           </p>
         </div>
       </div>
@@ -135,7 +134,7 @@ export default function SettlementPage() {
           </p>
 
           <p className="mt-1 text-[11px] text-[#A09AA7]">
-            Source: IR-99211 · Finding 3
+            Source: IR-99211
           </p>
         </div>
       </div>
@@ -156,7 +155,7 @@ export default function SettlementPage() {
           </p>
 
           <p className="mt-1 text-[11px] text-[#A09AA7]">
-            6 images · Oct 16
+            Source: WH-IMG-01
           </p>
         </div>
       </div>
@@ -174,8 +173,8 @@ export default function SettlementPage() {
           </p>
 
           <p className="mt-1.5 text-[12px] leading-[1.6] text-[#6F687A]">
-            DealDone matched the delivery, inspection and warehouse evidence
-            to calculate the final accepted quantity.
+            DealDone validated the delivery, inspection and warehouse evidence
+to determine the accepted quantity and settlement inputs.
           </p>
         </div>
       </div>

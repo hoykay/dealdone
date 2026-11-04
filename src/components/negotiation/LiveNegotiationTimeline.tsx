@@ -146,7 +146,7 @@ export default function LiveNegotiationTimeline() {
           </h2>
 
           <p className="mt-1 text-[11px] text-[#8A8493]">
-            Buyer and supplier AI agents · bounded mandates
+            AI opening positions · deterministic bounded negotiation
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function LiveNegotiationTimeline() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#BEB8D1]">
-              Authorized agreement
+              Negotiated agreement
             </p>
 
             <p className="mt-1 text-[11px] text-[#D8D3E5]">

@@ -106,7 +106,10 @@ setSupplierApproved(
 );
   }
 
-  const bothApproved = buyerApproved && supplierApproved;
+  const hasValidProposal = proposalVersion !== "";
+
+const bothApproved =
+  hasValidProposal && buyerApproved && supplierApproved;
 
   if (!loaded) {
     return null;
@@ -144,7 +147,8 @@ setSupplierApproved(
               <button
                 type="button"
                 onClick={approveBuyer}
-                className="h-[40px] rounded-[9px] bg-[#FF67B6] px-4 text-[12px] font-semibold text-white transition hover:bg-[#F45DAD]"
+disabled={!hasValidProposal}
+                className="h-[40px] rounded-[9px] bg-[#FF67B6] px-4 text-[12px] font-semibold text-white transition hover:bg-[#F45DAD] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
                 Approve
               </button>
@@ -178,12 +182,13 @@ setSupplierApproved(
               </span>
             ) : (
               <button
-                type="button"
-                onClick={approveSupplier}
-                className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB]"
-              >
-                Approve
-              </button>
+  type="button"
+  onClick={approveSupplier}
+  disabled={!hasValidProposal}
+  className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
+>
+  Approve
+</button>
             )}
           </div>
         </section>
@@ -193,15 +198,19 @@ setSupplierApproved(
       <div className="mt-3 flex items-center justify-between rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
         <div>
           <p className="text-[14px] font-semibold text-[#302A42]">
-            {bothApproved
-              ? "Ready to execute"
-              : "Waiting for both parties"}
+            {!hasValidProposal
+  ? "Negotiated proposal required"
+  : bothApproved
+    ? "Ready to execute"
+    : "Waiting for both parties"}
           </p>
 
           <p className="mt-1 text-[12px] text-[#837C8C]">
-            {bothApproved
-              ? "Both parties approved. The agreed settlement is ready for PayPal execution."
-              : "Both buyer and supplier must approve the exact settlement before PayPal execution."}
+            {!hasValidProposal
+  ? "Complete the negotiation first so both parties can approve the exact proposal version."
+  : bothApproved
+    ? "Both parties approved the exact negotiated proposal. The settlement is ready for PayPal execution."
+    : "Both buyer and supplier must approve the exact proposal version before PayPal execution."}
           </p>
         </div>
 

@@ -61,7 +61,6 @@ export default function NegotiationPage() {
             label="Settlement"
             href="/deals/dd-1048/settlement"
           />
-          <Tab label="Activity" />
         </div>
 
         {/* Page title */}
@@ -119,10 +118,10 @@ export default function NegotiationPage() {
               </p>
 
               <div className="space-y-2">
-                <EvidenceLine>Delivery note (line 4)</EvidenceLine>
-                <EvidenceLine>Inspection report (finding 3)</EvidenceLine>
-                <EvidenceLine>Warehouse photos (IMG_2210)</EvidenceLine>
-              </div>
+  <EvidenceLine>DN-11000 · 940 units received</EvidenceLine>
+  <EvidenceLine>IR-99211 · damaged units inspected</EvidenceLine>
+  <EvidenceLine>WH-IMG-01 · warehouse photo evidence</EvidenceLine>
+</div>
             </div>
           </section>
 
@@ -158,7 +157,7 @@ export default function NegotiationPage() {
 
               <div className="flex items-center gap-2 text-[14px] text-[#625C70]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#6046F4]" />
-                Disputes 15 damaged units
+                Disputes 30 of 70 damaged units initially
               </div>
             </div>
 
@@ -168,10 +167,10 @@ export default function NegotiationPage() {
               </p>
 
               <div className="space-y-2">
-                <EvidenceLine>Delivery note (line 8)</EvidenceLine>
-                <EvidenceLine>Quality report (section 2)</EvidenceLine>
-                <EvidenceLine>Email from Oct 14</EvidenceLine>
-              </div>
+  <EvidenceLine>DN-11000 · 940 units received</EvidenceLine>
+  <EvidenceLine>IR-99211 · 55 supplier-responsible units</EvidenceLine>
+  <EvidenceLine>WH-IMG-01 · warehouse photo evidence</EvidenceLine>
+</div>
             </div>
           </section>
 
@@ -197,8 +196,9 @@ export default function NegotiationPage() {
 
             <p className="mt-3 text-[12px] leading-[1.6] text-[#777082]">
               The evidence supports 60 missing units and 55 supplier-responsible
-              damaged units. The remaining 15 damaged units are disputed, so the
-              proposal excludes them from the buyer deduction.
+damaged units. The buyer initially claimed all 70 damaged units, while
+the supplier initially accepted 40. Their bounded negotiation converged
+on the evidence-supported 55 units.
             </p>
 
             <Link

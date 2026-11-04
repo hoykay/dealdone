@@ -9,7 +9,13 @@ type SavedAnalysis = {
     deliveredUnits: number;
     reportedDamagedUnits: number;
     acceptedSupplierDamageUnits: number;
+    findings: {
+      finding: string;
+      sourceId: string;
+      sourceLine: string;
+    }[];
   };
+
   deterministicAnalysis: {
     missingUnits: number;
     acceptedDamagedUnits: number;
@@ -22,23 +28,59 @@ type SavedAnalysis = {
   };
 };
 
+type SavedNegotiation = {
+  negotiation?: {
+    agreement?: {
+      reached?: boolean;
+      amount?: number;
+      round?: number;
+      proposalVersion?: string;
+    };
+  };
+};
+
 export default function LiveSettlementBreakdown() {
-  const [analysis, setAnalysis] = useState<SavedAnalysis | null>(null);
+  const [analysis, setAnalysis] =
+    useState<SavedAnalysis | null>(null);
+
+  const [negotiation, setNegotiation] =
+    useState<SavedNegotiation | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("dealdone-ai-analysis");
+    const savedAnalysis = localStorage.getItem(
+      "dealdone-ai-analysis"
+    );
 
-    if (!saved) return;
+    if (savedAnalysis) {
+      try {
+        setAnalysis(JSON.parse(savedAnalysis));
+      } catch {
+        console.error(
+          "Could not read saved DealDone AI analysis."
+        );
+      }
+    }
 
-    try {
-      setAnalysis(JSON.parse(saved));
-    } catch {
-      console.error("Could not read saved DealDone AI analysis.");
+    const savedNegotiation = localStorage.getItem(
+      "dealdone-negotiation"
+    );
+
+    if (savedNegotiation) {
+      try {
+        setNegotiation(JSON.parse(savedNegotiation));
+      } catch {
+        console.error(
+          "Could not read saved DealDone negotiation."
+        );
+      }
     }
   }, []);
 
-  const orderedUnits = analysis?.aiExtraction.orderedUnits ?? 1000;
-  const unitPrice = analysis?.aiExtraction.unitPrice ?? 18;
+  const orderedUnits =
+    analysis?.aiExtraction.orderedUnits ?? 1000;
+
+  const unitPrice =
+    analysis?.aiExtraction.unitPrice ?? 18;
 
   const missingUnits =
     analysis?.deterministicAnalysis.missingUnits ?? 60;
@@ -58,11 +100,45 @@ export default function LiveSettlementBreakdown() {
   const damageDeduction =
     analysis?.deterministicAnalysis.damageDeduction ?? 990;
 
-  const settlement =
+  const evidenceSettlement =
     analysis?.deterministicAnalysis.settlementAmount ?? 15930;
 
-  const release =
-    analysis?.deterministicAnalysis.authorizationRelease ?? 2070;
+  const negotiatedSettlement =
+    negotiation?.negotiation?.agreement?.reached === true &&
+    typeof negotiation.negotiation.agreement.amount === "number"
+      ? negotiation.negotiation.agreement.amount
+      : null;
+
+  const settlement =
+    negotiatedSettlement ?? evidenceSettlement;
+
+  const release = Math.max(
+    0,
+    originalAmount - settlement
+  );
+
+  const agreementRound =
+    negotiation?.negotiation?.agreement?.round;
+
+  const findings =
+    analysis?.aiExtraction.findings ?? [];
+
+  function sourceCitation(sourceIds: string[]) {
+    const matches = findings.filter((finding) =>
+      sourceIds.includes(finding.sourceId)
+    );
+
+    if (matches.length === 0) {
+      return sourceIds.join(" · ");
+    }
+
+    return matches
+      .map(
+        (finding) =>
+          `${finding.sourceId} · ${finding.sourceLine}`
+      )
+      .join(" · ");
+  }
 
   function money(value: number) {
     return value.toLocaleString("en-US", {
@@ -80,12 +156,14 @@ export default function LiveSettlementBreakdown() {
           </h2>
 
           <p className="mt-1 text-[13px] text-[#8B8493]">
-            Based on the evidence and agreed resolution
+            Evidence-backed calculation and negotiated resolution
           </p>
         </div>
 
         <span className="rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[12px] font-semibold text-[#21865A]">
-          {analysis ? "Live AI" : "Agreed"}
+          {negotiatedSettlement !== null
+            ? "Negotiated"
+            : "Evidence-backed"}
         </span>
       </div>
 
@@ -97,7 +175,12 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[12px] text-[#918A99]">
-              {orderedUnits.toLocaleString()} units × ${unitPrice.toFixed(2)}
+              {orderedUnits.toLocaleString()} units × $
+              {unitPrice.toFixed(2)}
+            </p>
+
+            <p className="mt-1 text-[10px] text-[#AAA3B0]">
+              {sourceCitation(["PO-77821"])}
             </p>
           </div>
 
@@ -115,6 +198,13 @@ export default function LiveSettlementBreakdown() {
             <p className="mt-1 text-[12px] text-[#918A99]">
               {missingUnits} units × ${unitPrice.toFixed(2)}
             </p>
+
+            <p className="mt-1 text-[10px] text-[#AAA3B0]">
+              {sourceCitation([
+                "PO-77821",
+                "DN-11000",
+              ])}
+            </p>
           </div>
 
           <span className="text-[15px] font-semibold text-[#E14999]">
@@ -125,11 +215,18 @@ export default function LiveSettlementBreakdown() {
         <div className="flex items-center justify-between border-b border-[#EEEAF2] px-4 py-2.5">
           <div>
             <p className="text-[14px] font-medium text-[#3E374E]">
-              Accepted damaged units
+              Supplier-responsible damaged units
             </p>
 
             <p className="mt-1 text-[12px] text-[#918A99]">
               {acceptedDamage} units × ${unitPrice.toFixed(2)}
+            </p>
+
+            <p className="mt-1 text-[10px] text-[#AAA3B0]">
+              {sourceCitation([
+                "IR-99211",
+                "WH-IMG-01",
+              ])}
             </p>
           </div>
 
@@ -145,7 +242,13 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[12px] text-[#8A8393]">
-              Payment for {payableUnits} accepted units
+              {negotiatedSettlement !== null
+                ? `Agreed by both agents${
+                    agreementRound
+                      ? ` in round ${agreementRound}`
+                      : ""
+                  }`
+                : `Evidence-based payment for ${payableUnits} units`}
             </p>
           </div>
 
@@ -179,7 +282,7 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[15px] font-semibold">
-              ${settlement.toLocaleString()}
+              ${money(settlement)}
             </p>
           </div>
 
@@ -189,18 +292,18 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[15px] font-semibold text-[#FF8FC8]">
-              ${release.toLocaleString()}
+              ${money(release)}
             </p>
           </div>
         </div>
 
-        {analysis && (
-          <div className="mt-3 rounded-[8px] bg-white/10 px-3 py-2">
-            <p className="text-[10px] font-semibold text-white/80">
-              ✓ Calculated from live evidence analysis
-            </p>
-          </div>
-        )}
+        <div className="mt-3 rounded-[8px] bg-white/10 px-3 py-2">
+          <p className="text-[10px] font-semibold text-white/80">
+            {negotiatedSettlement !== null
+              ? "✓ Validated evidence → bounded negotiation → agreed settlement"
+              : "✓ Calculated from validated evidence"}
+          </p>
+        </div>
       </div>
     </section>
   );

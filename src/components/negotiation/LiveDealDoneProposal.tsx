@@ -23,122 +23,171 @@ type SavedAnalysis = {
   };
 };
 
+type SavedNegotiation = {
+  negotiation?: {
+    agreement?: {
+      reached?: boolean;
+      amount?: number;
+      round?: number;
+      proposalVersion?: string;
+    };
+  };
+};
+
 export default function LiveDealDoneProposal() {
-  const [analysis, setAnalysis] = useState<SavedAnalysis | null>(null);
+  const [analysis, setAnalysis] =
+    useState<SavedAnalysis | null>(null);
+
+  const [negotiation, setNegotiation] =
+    useState<SavedNegotiation | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("dealdone-ai-analysis");
+    const savedAnalysis = localStorage.getItem(
+      "dealdone-ai-analysis"
+    );
 
-    if (!saved) return;
+    if (savedAnalysis) {
+      try {
+        setAnalysis(JSON.parse(savedAnalysis));
+      } catch {
+        console.error(
+          "Could not read saved DealDone AI analysis."
+        );
+      }
+    }
 
-    try {
-      setAnalysis(JSON.parse(saved));
-    } catch {
-      console.error("Could not read saved DealDone AI analysis.");
+    const savedNegotiation = localStorage.getItem(
+      "dealdone-negotiation"
+    );
+
+    if (savedNegotiation) {
+      try {
+        setNegotiation(JSON.parse(savedNegotiation));
+      } catch {
+        console.error(
+          "Could not read saved DealDone negotiation."
+        );
+      }
     }
   }, []);
 
-  const settlement =
+  const evidenceSettlement =
     analysis?.deterministicAnalysis.settlementAmount ?? 15930;
 
-  const release =
-    analysis?.deterministicAnalysis.authorizationRelease ?? 2070;
+  const negotiatedSettlement =
+    negotiation?.negotiation?.agreement?.reached === true &&
+    typeof negotiation.negotiation.agreement.amount === "number"
+      ? negotiation.negotiation.agreement.amount
+      : null;
+
+  const settlement =
+    negotiatedSettlement ?? evidenceSettlement;
+
+  const originalAmount =
+    analysis?.deterministicAnalysis.originalAmount ?? 18000;
+
+  const release = Math.max(
+    0,
+    originalAmount - settlement
+  );
 
   const payableUnits =
     analysis?.deterministicAnalysis.payableUnits ?? 885;
 
-  const missingUnits =
-    analysis?.deterministicAnalysis.missingUnits ?? 60;
-
-  const acceptedDamage =
-    analysis?.deterministicAnalysis.acceptedDamagedUnits ?? 55;
-
-  const reportedDamage =
-    analysis?.aiExtraction.reportedDamagedUnits ?? 70;
-
   const unitPrice =
     analysis?.aiExtraction.unitPrice ?? 18;
 
+  const agreementRound =
+    negotiation?.negotiation?.agreement?.round;
+
+  function money(value: number) {
+    return value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
   return (
-    <>
-      {/* DEALDONE PROPOSAL */}
-      <section className="relative overflow-hidden rounded-[14px] border border-[#E8DDF2] bg-[linear-gradient(145deg,#FFF9FC_0%,#F5EEFF_55%,#FFF7FB_100%)] p-4 shadow-[0_12px_32px_rgba(74,45,130,0.08)]">
-        <div className="absolute right-4 top-4 rounded-full bg-[#EAF8F0] px-2.5 py-1 text-[9px] font-semibold text-[#21865A]">
-          {analysis ? "Live AI" : "AI"}
+    <section className="relative overflow-hidden rounded-[14px] border border-[#E8DDF2] bg-[linear-gradient(145deg,#FFF9FC_0%,#F5EEFF_55%,#FFF7FB_100%)] p-4 shadow-[0_12px_32px_rgba(74,45,130,0.08)]">
+      <div className="absolute right-4 top-4 rounded-full bg-[#EAF8F0] px-2.5 py-1 text-[9px] font-semibold text-[#21865A]">
+        {negotiatedSettlement !== null
+          ? "Agreement reached"
+          : analysis
+            ? "Evidence-backed"
+            : "AI"}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FCE7F3] text-[14px] text-[#E14999]">
+          ✦
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FCE7F3] text-[14px] text-[#E14999]">
-            ✦
-          </div>
-
-          <div>
-            <p className="text-[12px] font-semibold text-[#4935D8]">
-              DealDone proposal
-            </p>
-
-            <p className="mt-1 text-[13px] font-medium text-[#6F687A]">
-              Evidence-backed settlement
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 text-center">
-          <p className="text-[38px] font-semibold tracking-[-0.045em] text-[#171332]">
-            ${settlement.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+        <div>
+          <p className="text-[12px] font-semibold text-[#4935D8]">
+            DealDone proposal
           </p>
 
-          <p className="mt-2 text-[12px] text-[#756E80]">
-            {payableUnits} accepted units × ${unitPrice.toFixed(2)} per unit
+          <p className="mt-1 text-[13px] font-medium text-[#6F687A]">
+            Evidence-backed negotiated settlement
           </p>
         </div>
+      </div>
 
-        <div className="mt-5 rounded-[10px] bg-white/80 p-3">
-          <div className="flex items-center justify-between text-[12px]">
-            <span className="text-[#837C8C]">Captured</span>
+      <div className="mt-5 text-center">
+        <p className="text-[38px] font-semibold tracking-[-0.045em] text-[#171332]">
+          ${money(settlement)}
+        </p>
 
-            <span className="font-semibold text-[#262038]">
-              ${settlement.toLocaleString()}
-            </span>
-          </div>
+        <p className="mt-2 text-[12px] text-[#756E80]">
+          {negotiatedSettlement !== null
+            ? `Buyer and supplier agents converged${
+                agreementRound
+                  ? ` in round ${agreementRound}`
+                  : ""
+              }`
+            : `${payableUnits} accepted units × $${unitPrice.toFixed(
+                2
+              )} per unit`}
+        </p>
+      </div>
 
-          <div className="mt-2 flex items-center justify-between text-[12px]">
-            <span className="text-[#837C8C]">Released</span>
+      <div className="mt-5 rounded-[10px] bg-white/80 p-3">
+        <div className="flex items-center justify-between text-[12px]">
+          <span className="text-[#837C8C]">
+            PayPal capture
+          </span>
 
-            <span className="font-semibold text-[#E14999]">
-              ${release.toLocaleString()}
-            </span>
-          </div>
+          <span className="font-semibold text-[#262038]">
+            ${money(settlement)}
+          </span>
         </div>
 
-        {analysis && (
-          <div className="mt-3 rounded-[9px] bg-[#EAF8F0] px-3 py-2">
-            <p className="text-[10px] font-semibold text-[#21865A]">
-              ✓ Generated from live evidence analysis
-            </p>
-          </div>
-        )}
+        <div className="mt-2 flex items-center justify-between text-[12px]">
+          <span className="text-[#837C8C]">
+            Authorization release
+          </span>
 
-        <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
-          <Link
-            href="/deals/dd-1048/settlement"
-            className="flex h-[42px] items-center justify-center gap-2 rounded-[9px] bg-[#FF67B6] px-4 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(255,103,182,0.20)] transition hover:bg-[#F55EAE]"
-          >
-            Accept proposal
-            <span>→</span>
-          </Link>
-
-          <button
-            type="button"
-            className="flex h-[42px] items-center justify-center rounded-[9px] border border-[#DDD8E5] bg-white px-3 text-[14px] font-semibold text-[#5B5467]"
-          >
-            View breakdown
-          </button>
+          <span className="font-semibold text-[#E14999]">
+            ${money(release)}
+          </span>
         </div>
-      </section>
-    </>
+      </div>
+
+      <div className="mt-3 rounded-[9px] bg-[#EAF8F0] px-3 py-2">
+        <p className="text-[10px] font-semibold text-[#21865A]">
+          {negotiatedSettlement !== null
+            ? "✓ Agreement generated from validated evidence and bounded AI negotiation"
+            : "✓ Proposal calculated from validated evidence"}
+        </p>
+      </div>
+
+      <Link
+        href="/deals/dd-1048/settlement"
+        className="mt-5 flex h-[42px] w-full items-center justify-center gap-2 rounded-[9px] bg-[#FF67B6] px-4 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(255,103,182,0.20)] transition hover:bg-[#F55EAE]"
+      >
+        Continue to approvals
+        <span>→</span>
+      </Link>
+    </section>
   );
 }

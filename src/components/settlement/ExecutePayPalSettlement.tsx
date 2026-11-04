@@ -103,15 +103,18 @@ if (!savedNegotiation) {
 const parsedNegotiation =
   JSON.parse(savedNegotiation);
 
-const negotiatedAmount =
-  parsedNegotiation?.negotiation?.agreement?.amount;
+const agreement =
+  parsedNegotiation?.negotiation?.agreement;
+
+const negotiatedAmount = agreement?.amount;
 
 if (
+  agreement?.reached !== true ||
   typeof negotiatedAmount !== "number" ||
   !Number.isFinite(negotiatedAmount)
 ) {
   throw new Error(
-    "The DealDone negotiated settlement amount is invalid."
+    "A valid DealDone negotiated agreement is required before PayPal capture."
   );
 }
 
