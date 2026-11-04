@@ -25,11 +25,13 @@ export default function SettlementApprovals() {
   const [supplierApproved, setSupplierApproved] = useState(false);
   const [settlementAmount, setSettlementAmount] = useState(15930);
   const [proposalVersion, setProposalVersion] = useState("");
+  const [agreementReached, setAgreementReached] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let currentSettlement = 15930;
     let currentProposalVersion = "";
+    let currentAgreementReached = false;
 
     const savedNegotiation =
       localStorage.getItem("dealdone-negotiation");
@@ -41,8 +43,11 @@ export default function SettlementApprovals() {
         const negotiatedAmount =
           parsed?.negotiation?.agreement?.amount;
 
-          const negotiatedProposalVersion =
-  parsed?.negotiation?.agreement?.proposalVersion;
+        const negotiatedProposalVersion =
+          parsed?.negotiation?.agreement?.proposalVersion;
+
+        currentAgreementReached =
+          parsed?.negotiation?.agreement?.reached === true;
 
 if (typeof negotiatedProposalVersion === "string") {
   currentProposalVersion = negotiatedProposalVersion;
@@ -75,16 +80,19 @@ const savedSupplierApproval = localStorage.getItem(
 );
 
 setBuyerApproved(
-  currentProposalVersion !== "" &&
+  currentAgreementReached &&
+    currentProposalVersion !== "" &&
     savedBuyerApproval === currentApprovalFingerprint
 );
 
 setSupplierApproved(
-  currentProposalVersion !== "" &&
+  currentAgreementReached &&
+    currentProposalVersion !== "" &&
     savedSupplierApproval === currentApprovalFingerprint
 );
 
     setProposalVersion(currentProposalVersion);
+    setAgreementReached(currentAgreementReached);
     setLoaded(true);
   }, []);
 
@@ -106,7 +114,8 @@ setSupplierApproved(
 );
   }
 
-  const hasValidProposal = proposalVersion !== "";
+  const hasValidProposal =
+    agreementReached && proposalVersion !== "";
 
 const bothApproved =
   hasValidProposal && buyerApproved && supplierApproved;
