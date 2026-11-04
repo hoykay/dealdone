@@ -1,26 +1,181 @@
 @import "tailwindcss";
 
+/* =========================================================
+   DealDone Design System
+   ========================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand */
+  --background: #f0f0f0;
+  --surface: #ffffff;
+  --surface-subtle: #f8f7fa;
+
+  --foreground: #211b35;
+  --foreground-secondary: #5f596d;
+  --foreground-muted: #817b8d;
+
+  /* Galactic Violet */
+  --primary: #6750f5;
+  --primary-hover: #5842df;
+  --primary-soft: #eeebff;
+
+  /* Bubblegum Pink */
+  --accent: #f47fbd;
+  --accent-soft: #fdeaf4;
+
+  /* Structure */
+  --border: #ddd9e3;
+  --border-strong: #c7c1ce;
+
+  /* Semantic */
+  --success: #16794f;
+  --success-soft: #e7f5ee;
+
+  --warning: #a15c00;
+  --warning-soft: #fff2dc;
+
+  --destructive: #b42318;
+  --destructive-soft: #fce8e6;
+
+  /* Focus */
+  --ring: #6750f5;
+
+  /* Radius */
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --radius-dialog: 16px;
+
+  /* Shadows */
+  --shadow-overlay:
+    0 12px 32px rgba(33, 27, 53, 0.08),
+    0 2px 8px rgba(33, 27, 53, 0.04);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+
+  --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =========================================================
+   Base
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+  color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
+  margin: 0;
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================
+   Typography
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Financial values should align cleanly */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.editorial {
+  font-family: var(--font-newsreader), Georgia, serif;
+}
+
+/* =========================================================
+   Interaction
+   ========================================================= */
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent);
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   Selection
+   ========================================================= */
+
+::selection {
+  background: var(--primary-soft);
+  color: var(--foreground);
+}
+
+/* =========================================================
+   Accessibility
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
