@@ -32,6 +32,30 @@ const buyerAgentSchema = {
   required: ["proposedAmount", "reasoning", "citations"],
 };
 
+function isTransientGeminiError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status?: number }).status === 503
+  ) {
+    return true;
+  }
+
+  const message =
+    error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("503") ||
+    message.includes("UNAVAILABLE") ||
+    message.includes("high demand")
+  );
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function POST() {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -55,9 +79,22 @@ export async function POST() {
     const preferredAmount = 15660;
     const maximumAuthorizedAmount = 15930;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: `
+    let proposal:
+      | {
+          proposedAmount: number;
+          reasoning: string;
+          citations: { sourceId: string; sourceLine: string }[];
+        }
+      | undefined;
+
+    let generationMode: "gemini" | "deterministic_fallback" =
+      "gemini";
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash-lite",
+          contents: `
 You are the BUYER negotiation agent for DealDone.
 
 You represent Acme Manufacturing in a commercial dispute with Nova Packaging.
@@ -89,17 +126,68 @@ The buyer's preferred position reflects:
 = 870 payable units
 870 × $18 = $15,660.
 `,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: buyerAgentSchema,
-      },
-    });
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: buyerAgentSchema,
+          },
+        });
 
-    if (!response.text) {
-      throw new Error("Gemini returned no buyer-agent response.");
+        if (!response.text) {
+          throw new Error(
+            "Gemini returned no buyer-agent response."
+          );
+        }
+
+        proposal = JSON.parse(response.text);
+        break;
+      } catch (error) {
+        if (!isTransientGeminiError(error) || attempt === 3) {
+          if (!isTransientGeminiError(error)) {
+            throw error;
+          }
+
+          generationMode = "deterministic_fallback";
+
+          proposal = {
+            proposedAmount: preferredAmount,
+            reasoning:
+              "Buyer fallback position uses the authorized preferred settlement: 1,000 ordered units minus 60 missing units and 70 initially reported damaged units leaves 870 payable units at $18.00 each.",
+            citations: [
+              {
+                sourceId: "PO-77821",
+                sourceLine: "LINE 3",
+              },
+              {
+                sourceId: "PO-77821",
+                sourceLine: "LINE 4",
+              },
+              {
+                sourceId: "DN-11000",
+                sourceLine: "LINE 2",
+              },
+              {
+                sourceId: "IR-99211",
+                sourceLine: "LINE 1",
+              },
+            ],
+          };
+
+          console.warn(
+            "Gemini buyer agent unavailable after retries; using deterministic mandate fallback."
+          );
+
+          break;
+        }
+
+        await wait(500 * attempt);
+      }
     }
 
-    const proposal = JSON.parse(response.text);
+    if (!proposal) {
+      throw new Error(
+        "Buyer negotiation agent produced no proposal."
+      );
+    }
 
     if (proposal.proposedAmount > maximumAuthorizedAmount) {
       throw new Error(
@@ -125,6 +213,7 @@ The buyer's preferred position reflects:
       },
 
       proposal,
+      generationMode,
     });
   } catch (error) {
     console.error("DealDone buyer agent failed:", error);

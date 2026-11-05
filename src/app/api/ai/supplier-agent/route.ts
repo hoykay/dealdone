@@ -32,6 +32,30 @@ const supplierAgentSchema = {
   required: ["proposedAmount", "reasoning", "citations"],
 };
 
+function isTransientGeminiError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status?: number }).status === 503
+  ) {
+    return true;
+  }
+
+  const message =
+    error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("503") ||
+    message.includes("UNAVAILABLE") ||
+    message.includes("high demand")
+  );
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function POST() {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -54,9 +78,22 @@ export async function POST() {
     const preferredAmount = 16200;
     const minimumAuthorizedAmount = 15930;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: `
+    let proposal:
+      | {
+          proposedAmount: number;
+          reasoning: string;
+          citations: { sourceId: string; sourceLine: string }[];
+        }
+      | undefined;
+
+    let generationMode: "gemini" | "deterministic_fallback" =
+      "gemini";
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash-lite",
+          contents: `
 You are the SUPPLIER negotiation agent for DealDone.
 
 You represent Nova Packaging in a commercial dispute with Acme Manufacturing.
@@ -89,17 +126,64 @@ The evidence-backed deterministic settlement is $15,930.
 The supplier may negotiate above that amount because its mandate allows a higher opening position,
 but it must clearly distinguish commercial preference from evidence-supported facts.
 `,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: supplierAgentSchema,
-      },
-    });
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: supplierAgentSchema,
+          },
+        });
 
-    if (!response.text) {
-      throw new Error("Gemini returned no supplier-agent response.");
+        if (!response.text) {
+          throw new Error(
+            "Gemini returned no supplier-agent response."
+          );
+        }
+
+        proposal = JSON.parse(response.text);
+        break;
+      } catch (error) {
+        if (!isTransientGeminiError(error) || attempt === 3) {
+          if (!isTransientGeminiError(error)) {
+            throw error;
+          }
+
+          generationMode = "deterministic_fallback";
+
+          proposal = {
+            proposedAmount: preferredAmount,
+            reasoning:
+              "Supplier fallback position uses the authorized commercial preference of $16,200 while preserving the evidence-backed $15,930 floor as the minimum acceptable settlement.",
+            citations: [
+              {
+                sourceId: "PO-77821",
+                sourceLine: "LINE 4",
+              },
+              {
+                sourceId: "DN-11000",
+                sourceLine: "LINE 2",
+              },
+              {
+                sourceId: "IR-99211",
+                sourceLine: "LINE 2",
+              },
+            ],
+          };
+
+          console.warn(
+            "Gemini supplier agent unavailable after retries; using deterministic mandate fallback."
+          );
+
+          break;
+        }
+
+        await wait(500 * attempt);
+      }
     }
 
-    const proposal = JSON.parse(response.text);
+    if (!proposal) {
+      throw new Error(
+        "Supplier negotiation agent produced no proposal."
+      );
+    }
 
     if (proposal.proposedAmount < minimumAuthorizedAmount) {
       throw new Error(
@@ -127,6 +211,7 @@ but it must clearly distinguish commercial preference from evidence-supported fa
       },
 
       proposal,
+      generationMode,
     });
   } catch (error) {
     console.error("DealDone supplier agent failed:", error);
