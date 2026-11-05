@@ -19,6 +19,10 @@ if (!executionId || typeof executionId !== "string") {
   );
 }
 
+    const appBaseUrl = (
+      process.env.APP_BASE_URL ?? new URL(request.url).origin
+    ).replace(/\/$/, "");
+
     const accessToken = await getPayPalAccessToken();
 
     const response = await fetch(
@@ -51,9 +55,9 @@ if (!executionId || typeof executionId !== "string") {
   user_action: "PAY_NOW",
   shipping_preference: "NO_SHIPPING",
   return_url:
-    "http://localhost:3000/deals/dd-1048/settlement?paypal=approved",
+    `${appBaseUrl}/deals/dd-1048/settlement?paypal=approved`,
   cancel_url:
-    "http://localhost:3000/deals/dd-1048/settlement?paypal=cancelled",
+    `${appBaseUrl}/deals/dd-1048/settlement?paypal=cancelled`,
 },
         }),
         cache: "no-store",
