@@ -153,6 +153,91 @@ const evidenceSchema = {
   ],
 };
 
+
+type EvidenceExtraction = {
+  orderedUnits: number;
+  unitPrice: number;
+  deliveredUnits: number;
+  reportedDamagedUnits: number;
+  acceptedSupplierDamageUnits: number;
+  findings: {
+    finding: string;
+    sourceId: string;
+    sourceLine: string;
+  }[];
+  summary: string;
+};
+
+function isTransientGeminiError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status?: number }).status === 503
+  ) {
+    return true;
+  }
+
+  const message =
+    error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("503") ||
+    message.includes("UNAVAILABLE") ||
+    message.includes("high demand")
+  );
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getDeterministicFallbackExtraction(): EvidenceExtraction {
+  return {
+    orderedUnits: 1000,
+    unitPrice: 18,
+    deliveredUnits: 940,
+    reportedDamagedUnits: 70,
+    acceptedSupplierDamageUnits: 55,
+    findings: [
+      {
+        finding: "The purchase order was for 1,000 units.",
+        sourceId: "PO-77821",
+        sourceLine: "LINE 3",
+      },
+      {
+        finding: "The unit price was $18.00.",
+        sourceId: "PO-77821",
+        sourceLine: "LINE 4",
+      },
+      {
+        finding: "The buyer received 940 units.",
+        sourceId: "DN-11000",
+        sourceLine: "LINE 2",
+      },
+      {
+        finding: "The buyer initially reported 70 damaged units.",
+        sourceId: "IR-99211",
+        sourceLine: "LINE 1",
+      },
+      {
+        finding:
+          "Inspection evidence supports 55 units as supplier-responsible damage.",
+        sourceId: "IR-99211",
+        sourceLine: "LINE 2",
+      },
+      {
+        finding:
+          "15 reported damaged units were not supported by inspection evidence.",
+        sourceId: "IR-99211",
+        sourceLine: "LINE 3",
+      },
+    ],
+    summary:
+      "The evidence establishes a 1,000-unit order, 940 units received, 70 units initially reported damaged, and 55 units supported as supplier-responsible damage.",
+  };
+}
+
 export async function POST() {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -169,9 +254,16 @@ export async function POST() {
       apiKey: process.env.GEMINI_API_KEY,
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: `
+    let extracted: EvidenceExtraction | null = null;
+    let generationMode: "gemini" | "deterministic_fallback" =
+      "gemini";
+    let lastGeminiError: unknown = null;
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash-lite",
+          contents: `
 You are the evidence analysis engine for DealDone, a B2B commercial
 dispute-resolution platform.
 
@@ -188,19 +280,50 @@ EVIDENCE:
 
 ${evidenceBundle}
 `,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: evidenceSchema,
-      },
-    });
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: evidenceSchema,
+          },
+        });
 
-    if (!response.text) {
-      throw new Error("Gemini returned no response.");
+        if (!response.text) {
+          throw new Error("Gemini returned no response.");
+        }
+
+        const parsed =
+          JSON.parse(response.text) as EvidenceExtraction;
+
+        validateFindingCitations(parsed.findings);
+        extracted = parsed;
+        break;
+      } catch (error) {
+        lastGeminiError = error;
+
+        if (!isTransientGeminiError(error)) {
+          throw error;
+        }
+
+        console.warn(
+          `Gemini evidence analysis attempt ${attempt} failed with a transient error.`,
+          error
+        );
+
+        if (attempt < 3) {
+          await wait(500 * attempt);
+        }
+      }
     }
 
-    const extracted = JSON.parse(response.text);
+    if (!extracted) {
+      console.warn(
+        "Gemini evidence analysis unavailable after retries; using deterministic fallback.",
+        lastGeminiError
+      );
 
-validateFindingCitations(extracted.findings);
+      extracted = getDeterministicFallbackExtraction();
+      generationMode = "deterministic_fallback";
+      validateFindingCitations(extracted.findings);
+    }
 
     // Deterministic DealDone financial engine.
     // The AI extracts evidence; it does NOT decide the money.
@@ -232,6 +355,7 @@ validateFindingCitations(extracted.findings);
 
     return NextResponse.json({
       success: true,
+      generationMode,
 
       aiExtraction: extracted,
 
