@@ -85,10 +85,6 @@ export default function LiveNegotiationTimeline() {
 
         setResult(data);
 
-        localStorage.setItem(
-          "dealdone-negotiation",
-          JSON.stringify(data)
-        );
       } catch (err) {
         setError(
           err instanceof Error

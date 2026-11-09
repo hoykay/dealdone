@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type SavedAnalysis = {
+type EvidenceAnalysis = {
   aiExtraction: {
     orderedUnits: number;
     unitPrice: number;
@@ -11,6 +11,7 @@ type SavedAnalysis = {
     reportedDamagedUnits: number;
     acceptedSupplierDamageUnits: number;
   };
+
   deterministicAnalysis: {
     missingUnits: number;
     acceptedDamagedUnits: number;
@@ -23,7 +24,10 @@ type SavedAnalysis = {
   };
 };
 
-type SavedNegotiation = {
+type SettlementState = {
+  settlementAmount: number;
+  originalAmount: number;
+
   negotiation?: {
     agreement?: {
       reached?: boolean;
@@ -36,55 +40,99 @@ type SavedNegotiation = {
 
 export default function LiveDealDoneProposal() {
   const [analysis, setAnalysis] =
-    useState<SavedAnalysis | null>(null);
+    useState<EvidenceAnalysis | null>(null);
 
-  const [negotiation, setNegotiation] =
-    useState<SavedNegotiation | null>(null);
+  const [settlementState, setSettlementState] =
+    useState<SettlementState | null>(null);
 
   useEffect(() => {
-    const savedAnalysis = localStorage.getItem(
-      "dealdone-ai-analysis"
-    );
-
-    if (savedAnalysis) {
+    async function loadServerState() {
       try {
-        setAnalysis(JSON.parse(savedAnalysis));
-      } catch {
+        const [
+          evidenceResponse,
+          settlementResponse,
+        ] = await Promise.all([
+          fetch(
+            "/api/evidence/current?dealId=DEAL-1048",
+            {
+              cache: "no-store",
+            }
+          ),
+
+          fetch(
+            "/api/settlements/current?dealId=DEAL-1048",
+            {
+              cache: "no-store",
+            }
+          ),
+        ]);
+
+        if (evidenceResponse.ok) {
+          const evidenceData =
+            await evidenceResponse.json();
+
+          if (
+            evidenceData.success &&
+            evidenceData.analysis
+          ) {
+            setAnalysis({
+              aiExtraction:
+                evidenceData.analysis.aiExtraction,
+
+              deterministicAnalysis:
+                evidenceData.analysis
+                  .deterministicAnalysis,
+            });
+          }
+        }
+
+        if (settlementResponse.ok) {
+          const settlementData =
+            await settlementResponse.json();
+
+          if (
+            settlementData.success &&
+            settlementData.settlement
+          ) {
+            setSettlementState(
+              settlementData.settlement
+            );
+          }
+        }
+      } catch (error) {
         console.error(
-          "Could not read saved DealDone AI analysis."
+          "Could not load DealDone proposal state.",
+          error
         );
       }
     }
 
-    const savedNegotiation = localStorage.getItem(
-      "dealdone-negotiation"
-    );
-
-    if (savedNegotiation) {
-      try {
-        setNegotiation(JSON.parse(savedNegotiation));
-      } catch {
-        console.error(
-          "Could not read saved DealDone negotiation."
-        );
-      }
-    }
+    void loadServerState();
   }, []);
 
   const evidenceSettlement =
-    analysis?.deterministicAnalysis.settlementAmount ?? 15930;
+    analysis?.deterministicAnalysis
+      .settlementAmount ?? 15930;
 
   const negotiatedSettlement =
-    negotiation?.negotiation?.agreement?.reached === true &&
-    typeof negotiation.negotiation.agreement.amount === "number"
-      ? negotiation.negotiation.agreement.amount
-      : null;
+    settlementState?.negotiation?.agreement
+      ?.reached === true &&
+    typeof settlementState.negotiation
+      .agreement.amount === "number"
+      ? settlementState.negotiation.agreement
+          .amount
+      : settlementState?.settlementAmount ??
+        null;
 
   const settlement =
-    negotiatedSettlement ?? evidenceSettlement;
+    negotiatedSettlement ??
+    evidenceSettlement;
 
   const originalAmount =
-    analysis?.deterministicAnalysis.originalAmount ?? 18000;
+    settlementState?.originalAmount ??
+    analysis?.deterministicAnalysis
+      .originalAmount ??
+    18000;
 
   const release = Math.max(
     0,
@@ -92,13 +140,15 @@ export default function LiveDealDoneProposal() {
   );
 
   const payableUnits =
-    analysis?.deterministicAnalysis.payableUnits ?? 885;
+    analysis?.deterministicAnalysis
+      .payableUnits ?? 885;
 
   const unitPrice =
     analysis?.aiExtraction.unitPrice ?? 18;
 
   const agreementRound =
-    negotiation?.negotiation?.agreement?.round;
+    settlementState?.negotiation?.agreement
+      ?.round;
 
   function money(value: number) {
     return value.toLocaleString("en-US", {
@@ -176,7 +226,7 @@ export default function LiveDealDoneProposal() {
       <div className="mt-3 rounded-[9px] bg-[#EAF8F0] px-3 py-2">
         <p className="text-[10px] font-semibold text-[#21865A]">
           {negotiatedSettlement !== null
-            ? "✓ Agreement generated from validated evidence and bounded AI negotiation"
+            ? "✓ Agreement loaded from DealDone's server-authoritative settlement record"
             : "✓ Proposal calculated from validated evidence"}
         </p>
       </div>

@@ -1,7 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import ExecutePayPalSettlement from "@/components/settlement/ExecutePayPalSettlement";
+
+type SettlementState = {
+  dealId: string;
+  proposalVersion: string;
+  evidenceAnalysisVersion: string | null;
+  originalAmount: number;
+  settlementAmount: number;
+  buyerApproved: boolean;
+  supplierApproved: boolean;
+  buyerApprovedAt: string | null;
+  supplierApprovedAt: string | null;
+  status:
+    | "pending_approval"
+    | "approved"
+    | "executing"
+    | "completed"
+    | "failed";
+  negotiation?: {
+    agreement?: {
+      reached?: boolean;
+      amount?: number;
+      proposalVersion?: string;
+    };
+  };
+};
 
 function CheckIcon() {
   return (
@@ -21,114 +47,206 @@ function CheckIcon() {
 }
 
 export default function SettlementApprovals() {
-  const [buyerApproved, setBuyerApproved] = useState(false);
-  const [supplierApproved, setSupplierApproved] = useState(false);
-  const [settlementAmount, setSettlementAmount] = useState(15930);
-  const [proposalVersion, setProposalVersion] = useState("");
-  const [agreementReached, setAgreementReached] = useState(false);
+  const [settlement, setSettlement] =
+    useState<SettlementState | null>(null);
+
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  const [approvingParty, setApprovingParty] = useState<
+    "buyer" | "supplier" | null
+  >(null);
 
-  useEffect(() => {
-    let currentSettlement = 15930;
-    let currentProposalVersion = "";
-    let currentAgreementReached = false;
+  const loadSettlement = useCallback(async () => {
+    try {
+      setError("");
 
-    const savedNegotiation =
-      localStorage.getItem("dealdone-negotiation");
-
-    if (savedNegotiation) {
-      try {
-        const parsed = JSON.parse(savedNegotiation);
-
-        const negotiatedAmount =
-          parsed?.negotiation?.agreement?.amount;
-
-        const negotiatedProposalVersion =
-          parsed?.negotiation?.agreement?.proposalVersion;
-
-        currentAgreementReached =
-          parsed?.negotiation?.agreement?.reached === true;
-
-if (typeof negotiatedProposalVersion === "string") {
-  currentProposalVersion = negotiatedProposalVersion;
-}
-
-        if (
-          typeof negotiatedAmount === "number" &&
-          Number.isFinite(negotiatedAmount)
-        ) {
-          currentSettlement = negotiatedAmount;
+      const response = await fetch(
+        "/api/settlements/current?dealId=DEAL-1048",
+        {
+          method: "GET",
+          cache: "no-store",
         }
-      } catch {
-        console.error(
-          "Could not read DealDone negotiated settlement."
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (response.status === 404) {
+          setSettlement(null);
+          return;
+        }
+
+        throw new Error(
+          data.message ??
+            "Could not load the settlement."
         );
       }
+
+      setSettlement(data.settlement);
+    } catch (err) {
+      console.error(
+        "Could not load authoritative settlement:",
+        err
+      );
+
+      setError(
+        "DealDone could not load the current settlement state."
+      );
+    } finally {
+      setLoaded(true);
     }
-
-    setSettlementAmount(currentSettlement);
-
-    const currentApprovalFingerprint =
-  `${currentSettlement}:${currentProposalVersion}`;
-
-const savedBuyerApproval = localStorage.getItem(
-  "dealdone-buyer-approved-proposal"
-);
-
-const savedSupplierApproval = localStorage.getItem(
-  "dealdone-supplier-approved-proposal"
-);
-
-setBuyerApproved(
-  currentAgreementReached &&
-    currentProposalVersion !== "" &&
-    savedBuyerApproval === currentApprovalFingerprint
-);
-
-setSupplierApproved(
-  currentAgreementReached &&
-    currentProposalVersion !== "" &&
-    savedSupplierApproval === currentApprovalFingerprint
-);
-
-    setProposalVersion(currentProposalVersion);
-    setAgreementReached(currentAgreementReached);
-    setLoaded(true);
   }, []);
 
-  function approveBuyer() {
-    setBuyerApproved(true);
+  useEffect(() => {
+    void loadSettlement();
+  }, [loadSettlement]);
 
-    localStorage.setItem(
-  "dealdone-buyer-approved-proposal",
-  `${settlementAmount}:${proposalVersion}`
-);
+  async function approve(
+    party: "buyer" | "supplier"
+  ) {
+    if (!settlement?.proposalVersion) {
+      return;
+    }
+
+    try {
+      setApprovingParty(party);
+      setError("");
+
+      const response = await fetch(
+        "/api/settlements/approve",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dealId: settlement.dealId,
+            proposalVersion:
+              settlement.proposalVersion,
+            party,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ??
+            `Could not record ${party} approval.`
+        );
+      }
+
+      await loadSettlement();
+    } catch (err) {
+      console.error(
+        `Could not record ${party} approval:`,
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not record approval."
+      );
+    } finally {
+      setApprovingParty(null);
+    }
   }
-
-  function approveSupplier() {
-    setSupplierApproved(true);
-
-    localStorage.setItem(
-  "dealdone-supplier-approved-proposal",
-  `${settlementAmount}:${proposalVersion}`
-);
-  }
-
-  const hasValidProposal =
-    agreementReached && proposalVersion !== "";
-
-const bothApproved =
-  hasValidProposal && buyerApproved && supplierApproved;
 
   if (!loaded) {
-    return null;
+    return (
+      <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-5">
+        <p className="text-[13px] text-[#837C8C]">
+          Loading authoritative settlement state…
+        </p>
+      </div>
+    );
   }
+
+  if (!settlement) {
+    return (
+      <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-5">
+        <p className="text-[14px] font-semibold text-[#302A42]">
+          Negotiated proposal required
+        </p>
+
+        <p className="mt-1 text-[12px] text-[#837C8C]">
+          Complete the AI negotiation before either
+          party can approve a settlement.
+        </p>
+
+        <Link
+          href="/deals/dd-1048/negotiation"
+          className="mt-4 inline-flex h-[40px] items-center rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white"
+        >
+          Open negotiation
+        </Link>
+      </div>
+    );
+  }
+
+  const agreementReached =
+    settlement.negotiation?.agreement?.reached === true;
+
+  const hasValidProposal =
+    agreementReached &&
+    settlement.proposalVersion !== "";
+
+  const buyerApproved =
+    settlement.buyerApproved;
+
+  const supplierApproved =
+    settlement.supplierApproved;
+
+  const bothApproved =
+    buyerApproved && supplierApproved;
+
+  const isCompleted =
+    settlement.status === "completed";
+
+  const isExecuting =
+    settlement.status === "executing";
+
+  const canExecute =
+    hasValidProposal &&
+    bothApproved &&
+    settlement.status === "approved";
 
   return (
     <>
-      {/* Approval cards */}
+      <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#918A98]">
+              Server-authoritative proposal
+            </p>
+
+            <p className="mt-1 text-[14px] font-semibold text-[#302A42]">
+              ${settlement.settlementAmount.toLocaleString(
+                "en-US",
+                {
+                  minimumFractionDigits: 2,
+                }
+              )}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+  {settlement.evidenceAnalysisVersion && (
+    <span className="rounded-[8px] bg-[#FFF2F8] px-3 py-2 font-mono text-[10px] font-semibold text-[#D94893]">
+      Evidence {settlement.evidenceAnalysisVersion}
+    </span>
+  )}
+
+  <span className="rounded-[8px] bg-[#F4F1FC] px-3 py-2 font-mono text-[10px] font-semibold text-[#4D35F3]">
+    Proposal {settlement.proposalVersion}
+  </span>
+</div>
+        </div>
+      </div>
+
       <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-        {/* Buyer approval */}
         <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -155,17 +273,23 @@ const bothApproved =
             ) : (
               <button
                 type="button"
-                onClick={approveBuyer}
-disabled={!hasValidProposal}
+                onClick={() => void approve("buyer")}
+                disabled={
+                  !hasValidProposal ||
+                  approvingParty !== null ||
+                  isExecuting ||
+                  isCompleted
+                }
                 className="h-[40px] rounded-[9px] bg-[#FF67B6] px-4 text-[12px] font-semibold text-white transition hover:bg-[#F45DAD] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
-                Approve
+                {approvingParty === "buyer"
+                  ? "Approving…"
+                  : "Approve"}
               </button>
             )}
           </div>
         </section>
 
-        {/* Supplier approval */}
         <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -191,47 +315,79 @@ disabled={!hasValidProposal}
               </span>
             ) : (
               <button
-  type="button"
-  onClick={approveSupplier}
-  disabled={!hasValidProposal}
-  className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
->
-  Approve
-</button>
+                type="button"
+                onClick={() =>
+                  void approve("supplier")
+                }
+                disabled={
+                  !hasValidProposal ||
+                  approvingParty !== null ||
+                  isExecuting ||
+                  isCompleted
+                }
+                className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
+              >
+                {approvingParty === "supplier"
+                  ? "Approving…"
+                  : "Approve"}
+              </button>
             )}
           </div>
         </section>
       </div>
 
-      {/* Execution bar */}
-      <div className="mt-3 flex items-center justify-between rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
+      {error && (
+        <p className="mt-3 text-[12px] font-medium text-[#C53E66]">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
         <div>
           <p className="text-[14px] font-semibold text-[#302A42]">
-            {!hasValidProposal
-  ? "Negotiated proposal required"
-  : bothApproved
-    ? "Ready to execute"
-    : "Waiting for both parties"}
+            {isCompleted
+              ? "Settlement completed"
+              : isExecuting
+                ? "Settlement executing"
+                : canExecute
+                  ? "Ready to execute"
+                  : "Waiting for both parties"}
           </p>
 
           <p className="mt-1 text-[12px] text-[#837C8C]">
-            {!hasValidProposal
-  ? "Complete the negotiation first so both parties can approve the exact proposal version."
-  : bothApproved
-    ? "Both parties approved the exact negotiated proposal. The settlement is ready for PayPal execution."
-    : "Both buyer and supplier must approve the exact proposal version before PayPal execution."}
+            {isCompleted
+              ? "The approved settlement was executed and independently verified through PayPal."
+              : isExecuting
+                ? "DealDone is executing the approved proposal through PayPal."
+                : canExecute
+                  ? "Both parties approved the exact server-authoritative proposal. It is ready for PayPal execution."
+                  : "Both buyer and supplier must approve the exact proposal stored by DealDone before payment execution."}
           </p>
         </div>
 
-        {bothApproved ? (
-          <ExecutePayPalSettlement />
+        {isCompleted ? (
+          <Link
+            href="/deals/dd-1048/payment-record"
+            className="flex h-[44px] min-w-[210px] items-center justify-center rounded-[9px] bg-[#4D35F3] px-6 text-[13px] font-semibold text-white transition hover:bg-[#3E29DB]"
+          >
+            View payment record
+          </Link>
+        ) : canExecute ? (
+          <ExecutePayPalSettlement
+  dealId={settlement.dealId}
+  proposalVersion={settlement.proposalVersion}
+  settlementAmount={settlement.settlementAmount}
+  originalAmount={settlement.originalAmount}
+/>
         ) : (
           <button
             type="button"
             disabled
             className="flex h-[44px] min-w-[235px] cursor-not-allowed items-center justify-center rounded-[9px] bg-[#DDD9E4] px-6 text-[13px] font-semibold text-[#8B8495]"
           >
-            Execute settlement via PayPal
+            {isExecuting
+              ? "Settlement in progress"
+              : "Execute settlement via PayPal"}
           </button>
         )}
       </div>

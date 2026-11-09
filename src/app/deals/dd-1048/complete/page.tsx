@@ -77,12 +77,12 @@ export default async function CompletePage({
 
           {/* Actions */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              className="flex h-[44px] items-center justify-center rounded-[9px] bg-[#FF5CB2] px-6 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(255,92,178,0.24)] transition hover:bg-[#F653A9]"
-            >
-              View payment record
-            </button>
+            <Link
+  href="/deals/dd-1048/payment-record"
+  className="flex h-[44px] items-center justify-center rounded-[9px] bg-[#FF5CB2] px-6 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(255,92,178,0.24)] transition hover:bg-[#F653A9]"
+>
+  View payment record
+</Link>
 
             <Link
               href="/deals"

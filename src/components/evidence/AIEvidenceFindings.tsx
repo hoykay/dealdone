@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type AIResult = {
@@ -35,6 +35,44 @@ export default function AIEvidenceFindings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+  async function loadSavedAnalysis() {
+    try {
+      const response = await fetch(
+        "/api/evidence/current?dealId=DEAL-1048",
+        {
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.analysis) {
+        return;
+      }
+
+      setResult({
+        success: true,
+        aiExtraction:
+          data.analysis.aiExtraction,
+        deterministicAnalysis:
+          data.analysis.deterministicAnalysis,
+      });
+    } catch (err) {
+      console.error(
+        "Could not load persisted DealDone evidence analysis.",
+        err
+      );
+    }
+  }
+
+  void loadSavedAnalysis();
+}, []);
+
   async function analyzeEvidence() {
     try {
       setLoading(true);
@@ -51,11 +89,7 @@ export default function AIEvidenceFindings() {
       }
 
       setResult(data);
-
-      localStorage.setItem(
-  "dealdone-ai-analysis",
-  JSON.stringify(data)
-);
+      
     } catch (err) {
       setError(
         err instanceof Error

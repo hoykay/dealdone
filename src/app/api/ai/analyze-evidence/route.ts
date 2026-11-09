@@ -1,5 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { supabaseServer } from "@/lib/supabase-server";
 
 const evidenceBundle = `
 SOURCE: PO-77821
@@ -353,36 +355,71 @@ ${evidenceBundle}
     const releaseCents =
       originalAmountCents - settlementCents;
 
-    return NextResponse.json({
-      success: true,
-      generationMode,
+    const deterministicAnalysis = {
+  missingUnits,
+  acceptedDamagedUnits:
+    extracted.acceptedSupplierDamageUnits,
+  payableUnits,
 
+  originalAmount: originalAmountCents / 100,
+  missingDeduction: missingDeductionCents / 100,
+  damageDeduction: damageDeductionCents / 100,
+  settlementAmount: settlementCents / 100,
+  authorizationRelease: releaseCents / 100,
+};
+
+const architecture = {
+  aiRole:
+    "Extract evidence-backed facts and citations",
+  dealDoneRole:
+    "Calculate financial outcome deterministically",
+  humanRole:
+    "Buyer and supplier approve the settlement",
+  paypalRole:
+    "Execute the approved financial settlement",
+};
+
+const analysisVersion = createHash("sha256")
+  .update(
+    JSON.stringify({
+      dealId: "DEAL-1048",
       aiExtraction: extracted,
+      deterministicAnalysis,
+    })
+  )
+  .digest("hex")
+  .slice(0, 12);
 
-      deterministicAnalysis: {
-        missingUnits,
-        acceptedDamagedUnits:
-          extracted.acceptedSupplierDamageUnits,
-        payableUnits,
-
-        originalAmount: originalAmountCents / 100,
-        missingDeduction: missingDeductionCents / 100,
-        damageDeduction: damageDeductionCents / 100,
-        settlementAmount: settlementCents / 100,
-        authorizationRelease: releaseCents / 100,
-      },
-
-      architecture: {
-        aiRole:
-          "Extract evidence-backed facts and citations",
-        dealDoneRole:
-          "Calculate financial outcome deterministically",
-        humanRole:
-          "Buyer and supplier approve the settlement",
-        paypalRole:
-          "Execute the approved financial settlement",
-      },
+const { error: persistError } =
+  await supabaseServer
+    .from("deal_evidence_analyses")
+    .insert({
+      deal_id: "DEAL-1048",
+      analysis_version: analysisVersion,
+      generation_mode: generationMode,
+      ai_extraction: extracted,
+      deterministic_analysis:
+        deterministicAnalysis,
+      architecture,
     });
+
+if (
+  persistError &&
+  persistError.code !== "23505"
+) {
+  throw new Error(
+    `Could not persist evidence analysis: ${persistError.message}`
+  );
+}
+
+return NextResponse.json({
+  success: true,
+  generationMode,
+  analysisVersion,
+  aiExtraction: extracted,
+  deterministicAnalysis,
+  architecture,
+});
   } catch (error) {
     console.error("DealDone evidence analysis failed:", error);
 

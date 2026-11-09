@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 type Status =
   | "idle"
@@ -9,62 +16,56 @@ type Status =
   | "authorizing"
   | "capturing"
   | "releasing"
+  | "verifying"
   | "complete"
   | "error";
 
-export default function ExecutePayPalSettlement() {
+type ExecutePayPalSettlementProps = {
+  dealId: string;
+  proposalVersion: string;
+  settlementAmount: number;
+  originalAmount: number;
+};
+
+export default function ExecutePayPalSettlement({
+  dealId,
+  proposalVersion,
+  settlementAmount,
+  originalAmount,
+}: ExecutePayPalSettlementProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const startedRef = useRef(false);
 
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] =
+    useState<Status>("idle");
+
   const [error, setError] = useState("");
 
-  const [settlementAmount, setSettlementAmount] = useState(15930);
-const [releaseAmount, setReleaseAmount] = useState(2070);
+  const releaseAmount =
+    originalAmount - settlementAmount;
 
-  const paypalApproved = searchParams.get("paypal") === "approved";
+  const paypalApproved =
+    searchParams.get("paypal") === "approved";
+
   const orderId = searchParams.get("token");
-useEffect(() => {
-  const savedNegotiation =
-    localStorage.getItem("dealdone-negotiation");
-
-  if (!savedNegotiation) return;
-
-  try {
-    const parsed = JSON.parse(savedNegotiation);
-
-    const negotiatedSettlement =
-      parsed?.negotiation?.agreement?.amount;
-
-    if (
-      typeof negotiatedSettlement === "number" &&
-      Number.isFinite(negotiatedSettlement)
-    ) {
-      setSettlementAmount(negotiatedSettlement);
-      setReleaseAmount(18000 - negotiatedSettlement);
-    }
-  } catch {
-    console.error(
-      "Could not read DealDone negotiated settlement."
-    );
-  }
-}, []);
 
   useEffect(() => {
-    if (!paypalApproved || !orderId || startedRef.current) {
-  return;
-}
+    if (
+      !paypalApproved ||
+      !orderId ||
+      startedRef.current
+    ) {
+      return;
+    }
 
-const approvedOrderId = orderId;
+    startedRef.current = true;
 
-startedRef.current = true;
-
-async function completeSettlement() {
+    async function completeSettlement() {
       try {
         setError("");
 
-        // 1. Authorize the approved PayPal order
+        // 1. Authorize the PayPal order.
         setStatus("authorizing");
 
         const authorizeResponse = await fetch(
@@ -72,73 +73,66 @@ async function completeSettlement() {
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
             body: JSON.stringify({
-  orderId: approvedOrderId,
+  orderId,
+  dealId,
+  proposalVersion,
 }),
           }
         );
 
-        const authorizeData = await authorizeResponse.json();
+        const authorizeData =
+          await authorizeResponse.json();
 
-        if (!authorizeResponse.ok || !authorizeData.authorizationId) {
-          throw new Error("PayPal authorization failed.");
+        if (
+          !authorizeResponse.ok ||
+          !authorizeData.authorizationId
+        ) {
+          throw new Error(
+            "PayPal authorization failed."
+          );
         }
 
-        const authorizationId = authorizeData.authorizationId;
+        const authorizationId =
+          authorizeData.authorizationId;
 
-        // 2. Read the negotiated DealDone agreement and capture it
-setStatus("capturing");
+        // 2. Capture the exact settlement amount
+        // stored server-side for this proposal.
+        setStatus("capturing");
 
-const savedNegotiation =
-  localStorage.getItem("dealdone-negotiation");
+        const captureResponse = await fetch(
+          "/api/paypal/capture-authorization",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              authorizationId,
+              dealId,
+              proposalVersion,
+            }),
+          }
+        );
 
-if (!savedNegotiation) {
-  throw new Error(
-    "No DealDone negotiated settlement was found."
-  );
-}
+        const captureData =
+          await captureResponse.json();
 
-const parsedNegotiation =
-  JSON.parse(savedNegotiation);
-
-const agreement =
-  parsedNegotiation?.negotiation?.agreement;
-
-const negotiatedAmount = agreement?.amount;
-
-if (
-  agreement?.reached !== true ||
-  typeof negotiatedAmount !== "number" ||
-  !Number.isFinite(negotiatedAmount)
-) {
-  throw new Error(
-    "A valid DealDone negotiated agreement is required before PayPal capture."
-  );
-}
-
-const captureResponse = await fetch(
-  "/api/paypal/capture-authorization",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      authorizationId,
-      settlementAmount: negotiatedAmount,
-    }),
-  }
-);
-
-        const captureData = await captureResponse.json();
-
-        if (!captureResponse.ok || !captureData.captureId) {
-          throw new Error("PayPal capture failed.");
+        if (
+          !captureResponse.ok ||
+          !captureData.captureId
+        ) {
+          throw new Error(
+            captureData.message ??
+              "PayPal capture failed."
+          );
         }
 
-        // 3. Release the remaining uncaptured authorization
+        // 3. Release the unused authorization.
         setStatus("releasing");
 
         const voidResponse = await fetch(
@@ -146,59 +140,83 @@ const captureResponse = await fetch(
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type":
+                "application/json",
             },
             body: JSON.stringify({
-              authorizationId,
-            }),
+  authorizationId,
+  dealId,
+  proposalVersion,
+}),
           }
         );
 
-        const voidData = await voidResponse.json();
+        const voidData =
+          await voidResponse.json();
 
-        if (!voidResponse.ok || voidData.status !== "VOIDED") {
+        if (
+          !voidResponse.ok ||
+          voidData.status !== "VOIDED"
+        ) {
           throw new Error(
             "The settlement was captured, but the remaining authorization could not be released."
           );
         }
 
-        // 4. Verify final PayPal state
-        const verifyResponse = await fetch(
-          `/api/paypal/authorization-status?authorizationId=${authorizationId}`,
+        // 4. Ask DealDone's server to independently
+        // verify the final PayPal state.
+        setStatus("verifying");
+
+        const completeResponse = await fetch(
+          "/api/settlements/complete",
           {
-            cache: "no-store",
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              dealId,
+              proposalVersion,
+            }),
           }
         );
 
-        const verifyData = await verifyResponse.json();
+        const completeData =
+          await completeResponse.json();
 
-        if (!verifyResponse.ok || verifyData.status !== "VOIDED") {
+        if (
+          !completeResponse.ok ||
+          !completeData.success
+        ) {
           throw new Error(
-            "PayPal settlement completed, but final verification failed."
+            completeData.message ??
+              "Final settlement verification failed."
           );
         }
 
         setStatus("complete");
 
-        const completedProposalVersion =
-  parsedNegotiation?.negotiation?.agreement?.proposalVersion;
-
-if (
-  typeof completedProposalVersion === "string" &&
-  completedProposalVersion
-) {
-  localStorage.removeItem(
-    `dealdone-paypal-execution-${completedProposalVersion}`
-  );
-}
-
-        // 5. Send the real IDs to the completion screen
+        // 5. Completion screen receives IDs that
+        // were verified and persisted by the server.
         const params = new URLSearchParams({
-  orderId: approvedOrderId,
-  authorizationId,
-  captureId: captureData.captureId,
-  completedAt: new Date().toISOString(),
-});
+          orderId:
+            completeData.orderId ?? orderId,
+
+          authorizationId:
+            completeData.authorizationId ??
+            authorizationId,
+
+          captureId:
+            completeData.captureId ??
+            captureData.captureId,
+
+          completedAt:
+            completeData.completedAt ??
+            new Date().toISOString(),
+
+          proposalVersion,
+        });
 
         router.replace(
           `/deals/dd-1048/complete?${params.toString()}`
@@ -216,61 +234,59 @@ if (
       }
     }
 
-    completeSettlement();
-  }, [paypalApproved, orderId, router]);
+    void completeSettlement();
+  }, [
+    dealId,
+    orderId,
+    paypalApproved,
+    proposalVersion,
+    router,
+  ]);
 
   async function startPayPalSettlement() {
     try {
       setStatus("creating");
       setError("");
 
-      const savedNegotiation =
-  localStorage.getItem("dealdone-negotiation");
+      /*
+       * The proposal fingerprint itself acts as the
+       * deterministic execution key.
+       *
+       * No browser storage is required.
+       */
+      const executionId =
+        `settlement-${proposalVersion}`;
 
-if (!savedNegotiation) {
-  throw new Error("No negotiated settlement was found.");
-}
-
-const parsedNegotiation = JSON.parse(savedNegotiation);
-
-const proposalVersion =
-  parsedNegotiation?.negotiation?.agreement?.proposalVersion;
-
-if (!proposalVersion) {
-  throw new Error("No proposal version was found.");
-}
-
-const executionStorageKey =
-  `dealdone-paypal-execution-${proposalVersion}`;
-
-let executionId =
-  localStorage.getItem(executionStorageKey);
-
-if (!executionId) {
-  executionId = crypto.randomUUID();
-  localStorage.setItem(executionStorageKey, executionId);
-}
-
-const response = await fetch(
-  "/api/paypal/create-order",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      executionId,
-    }),
-  }
-);
+      const response = await fetch(
+        "/api/paypal/create-order",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            executionId,
+            dealId,
+            proposalVersion,
+          }),
+        }
+      );
 
       const data = await response.json();
 
-      if (!response.ok || !data.approvalUrl) {
-        throw new Error("Could not create the PayPal order.");
+      if (
+        !response.ok ||
+        !data.approvalUrl
+      ) {
+        throw new Error(
+          data.message ??
+            "Could not create the PayPal order."
+        );
       }
 
-      window.location.href = data.approvalUrl;
+      window.location.href =
+        data.approvalUrl;
     } catch (err) {
       console.error(err);
 
@@ -288,36 +304,52 @@ const response = await fetch(
     status === "creating" ||
     status === "authorizing" ||
     status === "capturing" ||
-    status === "releasing";
+    status === "releasing" ||
+    status === "verifying";
 
-  let buttonText = "Execute settlement via PayPal";
+  let buttonText =
+    "Execute settlement via PayPal";
 
   if (status === "creating") {
     buttonText = "Opening PayPal…";
   }
 
   if (status === "authorizing") {
-    buttonText = "Authorizing payment…";
+    buttonText =
+      "Authorizing payment…";
   }
 
   if (status === "capturing") {
-    buttonText = `Capturing $${settlementAmount.toLocaleString()}…`;
+    buttonText =
+      `Capturing $${settlementAmount.toLocaleString()}…`;
   }
 
   if (status === "releasing") {
-    buttonText = `Releasing $${releaseAmount.toLocaleString()}…`;
+    buttonText =
+      `Releasing $${releaseAmount.toLocaleString()}…`;
+  }
+
+  if (status === "verifying") {
+    buttonText =
+      "Verifying settlement…";
   }
 
   if (status === "complete") {
-    buttonText = "Settlement completed";
+    buttonText =
+      "Settlement completed";
   }
 
   return (
     <div className="flex flex-col items-end gap-2">
       <button
         type="button"
-        onClick={startPayPalSettlement}
-        disabled={isProcessing || status === "complete"}
+        onClick={() =>
+          void startPayPalSettlement()
+        }
+        disabled={
+          isProcessing ||
+          status === "complete"
+        }
         className="flex h-[44px] min-w-[235px] items-center justify-center gap-2 rounded-[9px] bg-[#24164F] px-6 text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(36,22,79,0.18)] transition hover:bg-[#302064] disabled:cursor-not-allowed disabled:opacity-65"
       >
         {isProcessing && (
@@ -326,9 +358,10 @@ const response = await fetch(
 
         {buttonText}
 
-        {!isProcessing && status !== "complete" && (
-          <span>→</span>
-        )}
+        {!isProcessing &&
+          status !== "complete" && (
+            <span>→</span>
+          )}
       </button>
 
       {error && (

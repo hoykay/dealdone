@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type SavedAnalysis = {
+type EvidenceAnalysis = {
   aiExtraction: {
     orderedUnits: number;
     unitPrice: number;
@@ -28,7 +28,10 @@ type SavedAnalysis = {
   };
 };
 
-type SavedNegotiation = {
+type SettlementState = {
+  originalAmount: number;
+  settlementAmount: number;
+
   negotiation?: {
     agreement?: {
       reached?: boolean;
@@ -41,39 +44,74 @@ type SavedNegotiation = {
 
 export default function LiveSettlementBreakdown() {
   const [analysis, setAnalysis] =
-    useState<SavedAnalysis | null>(null);
+    useState<EvidenceAnalysis | null>(null);
 
-  const [negotiation, setNegotiation] =
-    useState<SavedNegotiation | null>(null);
+  const [settlementState, setSettlementState] =
+    useState<SettlementState | null>(null);
 
   useEffect(() => {
-    const savedAnalysis = localStorage.getItem(
-      "dealdone-ai-analysis"
-    );
-
-    if (savedAnalysis) {
+    async function loadServerState() {
       try {
-        setAnalysis(JSON.parse(savedAnalysis));
-      } catch {
+        const [
+          evidenceResponse,
+          settlementResponse,
+        ] = await Promise.all([
+          fetch(
+            "/api/evidence/current?dealId=DEAL-1048",
+            {
+              cache: "no-store",
+            }
+          ),
+
+          fetch(
+            "/api/settlements/current?dealId=DEAL-1048",
+            {
+              cache: "no-store",
+            }
+          ),
+        ]);
+
+        if (evidenceResponse.ok) {
+          const evidenceData =
+            await evidenceResponse.json();
+
+          if (
+            evidenceData.success &&
+            evidenceData.analysis
+          ) {
+            setAnalysis({
+              aiExtraction:
+                evidenceData.analysis.aiExtraction,
+
+              deterministicAnalysis:
+                evidenceData.analysis
+                  .deterministicAnalysis,
+            });
+          }
+        }
+
+        if (settlementResponse.ok) {
+          const settlementData =
+            await settlementResponse.json();
+
+          if (
+            settlementData.success &&
+            settlementData.settlement
+          ) {
+            setSettlementState(
+              settlementData.settlement
+            );
+          }
+        }
+      } catch (error) {
         console.error(
-          "Could not read saved DealDone AI analysis."
+          "Could not load DealDone settlement breakdown.",
+          error
         );
       }
     }
 
-    const savedNegotiation = localStorage.getItem(
-      "dealdone-negotiation"
-    );
-
-    if (savedNegotiation) {
-      try {
-        setNegotiation(JSON.parse(savedNegotiation));
-      } catch {
-        console.error(
-          "Could not read saved DealDone negotiation."
-        );
-      }
-    }
+    void loadServerState();
   }, []);
 
   const orderedUnits =
@@ -83,34 +121,48 @@ export default function LiveSettlementBreakdown() {
     analysis?.aiExtraction.unitPrice ?? 18;
 
   const missingUnits =
-    analysis?.deterministicAnalysis.missingUnits ?? 60;
+    analysis?.deterministicAnalysis
+      .missingUnits ?? 60;
 
   const acceptedDamage =
-    analysis?.deterministicAnalysis.acceptedDamagedUnits ?? 55;
+    analysis?.deterministicAnalysis
+      .acceptedDamagedUnits ?? 55;
 
   const payableUnits =
-    analysis?.deterministicAnalysis.payableUnits ?? 885;
+    analysis?.deterministicAnalysis
+      .payableUnits ?? 885;
 
   const originalAmount =
-    analysis?.deterministicAnalysis.originalAmount ?? 18000;
+    settlementState?.originalAmount ??
+    analysis?.deterministicAnalysis
+      .originalAmount ??
+    18000;
 
   const missingDeduction =
-    analysis?.deterministicAnalysis.missingDeduction ?? 1080;
+    analysis?.deterministicAnalysis
+      .missingDeduction ?? 1080;
 
   const damageDeduction =
-    analysis?.deterministicAnalysis.damageDeduction ?? 990;
+    analysis?.deterministicAnalysis
+      .damageDeduction ?? 990;
 
   const evidenceSettlement =
-    analysis?.deterministicAnalysis.settlementAmount ?? 15930;
+    analysis?.deterministicAnalysis
+      .settlementAmount ?? 15930;
 
   const negotiatedSettlement =
-    negotiation?.negotiation?.agreement?.reached === true &&
-    typeof negotiation.negotiation.agreement.amount === "number"
-      ? negotiation.negotiation.agreement.amount
-      : null;
+    settlementState?.negotiation?.agreement
+      ?.reached === true &&
+    typeof settlementState.negotiation
+      .agreement.amount === "number"
+      ? settlementState.negotiation.agreement
+          .amount
+      : settlementState?.settlementAmount ??
+        null;
 
   const settlement =
-    negotiatedSettlement ?? evidenceSettlement;
+    negotiatedSettlement ??
+    evidenceSettlement;
 
   const release = Math.max(
     0,
@@ -118,14 +170,20 @@ export default function LiveSettlementBreakdown() {
   );
 
   const agreementRound =
-    negotiation?.negotiation?.agreement?.round;
+    settlementState?.negotiation?.agreement
+      ?.round;
 
   const findings =
     analysis?.aiExtraction.findings ?? [];
 
-  function sourceCitation(sourceIds: string[]) {
-    const matches = findings.filter((finding) =>
-      sourceIds.includes(finding.sourceId)
+  function sourceCitation(
+    sourceIds: string[]
+  ) {
+    const matches = findings.filter(
+      (finding) =>
+        sourceIds.includes(
+          finding.sourceId
+        )
     );
 
     if (matches.length === 0) {
@@ -180,7 +238,9 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[10px] text-[#AAA3B0]">
-              {sourceCitation(["PO-77821"])}
+              {sourceCitation([
+                "PO-77821",
+              ])}
             </p>
           </div>
 
@@ -196,7 +256,8 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[12px] text-[#918A99]">
-              {missingUnits} units × ${unitPrice.toFixed(2)}
+              {missingUnits} units × $
+              {unitPrice.toFixed(2)}
             </p>
 
             <p className="mt-1 text-[10px] text-[#AAA3B0]">
@@ -219,7 +280,8 @@ export default function LiveSettlementBreakdown() {
             </p>
 
             <p className="mt-1 text-[12px] text-[#918A99]">
-              {acceptedDamage} units × ${unitPrice.toFixed(2)}
+              {acceptedDamage} units × $
+              {unitPrice.toFixed(2)}
             </p>
 
             <p className="mt-1 text-[10px] text-[#AAA3B0]">
@@ -243,7 +305,7 @@ export default function LiveSettlementBreakdown() {
 
             <p className="mt-1 text-[12px] text-[#8A8393]">
               {negotiatedSettlement !== null
-                ? `Agreed by both agents${
+                ? `Agent agreement · pending human approval${
                     agreementRound
                       ? ` in round ${agreementRound}`
                       : ""
@@ -300,7 +362,7 @@ export default function LiveSettlementBreakdown() {
         <div className="mt-3 rounded-[8px] bg-white/10 px-3 py-2">
           <p className="text-[10px] font-semibold text-white/80">
             {negotiatedSettlement !== null
-              ? "✓ Validated evidence → bounded negotiation → agreed settlement"
+              ? "✓ Server-backed evidence → bounded negotiation → agreed settlement"
               : "✓ Calculated from validated evidence"}
           </p>
         </div>

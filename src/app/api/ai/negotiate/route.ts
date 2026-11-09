@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabase-server";
 
 
 type BuyerAgentResponse = {
@@ -171,10 +172,44 @@ export async function POST(request: Request) {
 
     const agreedAmount = money(supplierFinal);
 
+    const {
+  data: evidenceAnalysis,
+  error: evidenceAnalysisError,
+} = await supabaseServer
+  .from("deal_evidence_analyses")
+  .select("analysis_version")
+  .eq("deal_id", "DEAL-1048")
+  .order("created_at", {
+    ascending: false,
+  })
+  .limit(1)
+  .maybeSingle();
+
+if (evidenceAnalysisError) {
+  throw new Error(
+    `Could not load evidence provenance: ${evidenceAnalysisError.message}`
+  );
+}
+
+if (!evidenceAnalysis?.analysis_version) {
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        "Evidence analysis must exist before negotiation can begin.",
+    },
+    { status: 409 }
+  );
+}
+
+const evidenceAnalysisVersion =
+  evidenceAnalysis.analysis_version;
+
     const proposalVersion = createHash("sha256")
   .update(
     JSON.stringify({
       dealId: "DEAL-1048",
+      evidenceAnalysisVersion,
       buyerFinal,
       supplierFinal,
       agreedAmount,
@@ -182,6 +217,62 @@ export async function POST(request: Request) {
   )
   .digest("hex")
   .slice(0, 12);
+
+  const negotiationPayload = {
+  dealId: "DEAL-1048",
+  evidenceAnalysisVersion,
+
+  buyer: {
+    openingProposal: buyerOpening,
+    counterProposal: buyerCounter,
+    finalAuthorizedOffer: buyerFinal,
+    maximumAuthorizedAmount: buyerMaximum,
+  },
+
+  supplier: {
+    openingProposal: supplierOpening,
+    counterProposal: supplierCounter,
+    finalAuthorizedOffer: supplierFinal,
+    minimumAuthorizedAmount: supplierMinimum,
+  },
+
+  agreement: {
+    reached: true,
+    amount: agreedAmount,
+    proposalVersion,
+  },
+
+  controls: {
+    buyerMaximumAuthorized: buyerMaximum,
+    supplierMinimumAuthorized: supplierMinimum,
+    enforcement:
+      "DealDone code enforces both mandates. AI agents cannot authorize settlement outside these limits.",
+  },
+};
+
+const { error: settlementError } = await supabaseServer
+  .from("deal_settlements")
+  .upsert(
+    {
+      deal_id: "DEAL-1048",
+      proposal_version: proposalVersion,
+      evidence_analysis_version:
+  evidenceAnalysisVersion,
+      original_amount: 18000,
+      settlement_amount: agreedAmount,
+      negotiation_payload: negotiationPayload,
+    },
+    {
+      onConflict: "deal_id,proposal_version",
+      ignoreDuplicates: true,
+    }
+  );
+
+if (settlementError) {
+  throw new Error(
+    `Could not persist negotiated settlement: ${settlementError.message}`
+  );
+}
 
     /*
      * STEP 7
@@ -247,6 +338,7 @@ export async function POST(request: Request) {
   amount: agreedAmount,
   round: 3,
   proposalVersion,
+  evidenceAnalysisVersion,
 },
       },
 
