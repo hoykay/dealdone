@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { createClient as createAuthClient } from "@/lib/supabase/server";
 
 type ApprovalParty = "buyer" | "supplier";
 
@@ -53,19 +54,25 @@ export async function GET(request: Request) {
         proposalVersion: data.proposal_version,
         settlementAmount: Number(data.settlement_amount),
         buyerApproved: Boolean(data.buyer_approved_at),
-        supplierApproved: Boolean(data.supplier_approved_at),
+        supplierApproved: Boolean(
+          data.supplier_approved_at
+        ),
         buyerApprovedAt: data.buyer_approved_at,
         supplierApprovedAt: data.supplier_approved_at,
         status: data.status,
       },
     });
   } catch (error) {
-    console.error("Settlement status lookup failed:", error);
+    console.error(
+      "Settlement status lookup failed:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
-        message: "Could not read settlement approval state.",
+        message:
+          "Could not read settlement approval state.",
       },
       { status: 500 }
     );
@@ -78,13 +85,8 @@ export async function POST(request: Request) {
 
     const dealId = body?.dealId;
     const proposalVersion = body?.proposalVersion;
-    const party = body?.party as ApprovalParty;
 
-    if (
-      !dealId ||
-      !proposalVersion ||
-      (party !== "buyer" && party !== "supplier")
-    ) {
+    if (!dealId || !proposalVersion) {
       return NextResponse.json(
         {
           success: false,
@@ -94,6 +96,53 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. Verify the authenticated Supabase user.
+    const authClient = await createAuthClient();
+
+    const { data: claimsData, error: claimsError } =
+      await authClient.auth.getClaims();
+
+    const userId = claimsData?.claims?.sub;
+
+    if (claimsError || !userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "You must be signed in to approve this settlement.",
+        },
+        { status: 401 }
+      );
+    }
+
+    // 2. Derive the user's role from the server-side mapping.
+    const { data: participant, error: participantError } =
+      await supabaseServer
+        .from("deal_participants")
+        .select("role")
+        .eq("deal_id", dealId)
+        .eq("user_id", userId)
+        .single();
+
+    if (
+      participantError ||
+      !participant ||
+      (participant.role !== "buyer" &&
+        participant.role !== "supplier")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "You are not authorized to approve this deal.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const party = participant.role as ApprovalParty;
+
+    // 3. Load the exact server-authoritative proposal.
     const { data: existing, error: lookupError } =
       await supabaseServer
         .from("deal_settlements")
@@ -112,7 +161,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Settlement proposal not found.",
+          message:
+            "Settlement proposal not found.",
         },
         { status: 404 }
       );
@@ -130,6 +180,20 @@ export async function POST(request: Request) {
         },
         { status: 409 }
       );
+    }
+
+    // 4. Make repeated approval by the same party idempotent.
+    if (
+      (party === "buyer" &&
+        existing.buyer_approved_at) ||
+      (party === "supplier" &&
+        existing.supplier_approved_at)
+    ) {
+      return NextResponse.json({
+        success: true,
+        alreadyApproved: true,
+        party,
+      });
     }
 
     const approvedAt = new Date().toISOString();
@@ -178,22 +242,31 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      party,
       settlement: {
         dealId: updated.deal_id,
         proposalVersion: updated.proposal_version,
-        settlementAmount: Number(updated.settlement_amount),
-        buyerApproved: Boolean(updated.buyer_approved_at),
+        settlementAmount: Number(
+          updated.settlement_amount
+        ),
+        buyerApproved: Boolean(
+          updated.buyer_approved_at
+        ),
         supplierApproved: Boolean(
           updated.supplier_approved_at
         ),
-        buyerApprovedAt: updated.buyer_approved_at,
+        buyerApprovedAt:
+          updated.buyer_approved_at,
         supplierApprovedAt:
           updated.supplier_approved_at,
         status: updated.status,
       },
     });
   } catch (error) {
-    console.error("Settlement approval failed:", error);
+    console.error(
+      "Settlement approval failed:",
+      error
+    );
 
     return NextResponse.json(
       {

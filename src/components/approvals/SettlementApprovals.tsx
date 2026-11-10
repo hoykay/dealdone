@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import Link from "next/link";
 import ExecutePayPalSettlement from "@/components/settlement/ExecutePayPalSettlement";
+
+type ApprovalRole = "buyer" | "supplier";
 
 type SettlementState = {
   dealId: string;
@@ -29,6 +35,12 @@ type SettlementState = {
   };
 };
 
+type AuthState = {
+  authenticated: boolean;
+  email: string | null;
+  role: ApprovalRole | null;
+};
+
 function CheckIcon() {
   return (
     <svg
@@ -50,11 +62,18 @@ export default function SettlementApprovals() {
   const [settlement, setSettlement] =
     useState<SettlementState | null>(null);
 
+  const [auth, setAuth] = useState<AuthState>({
+    authenticated: false,
+    email: null,
+    role: null,
+  });
+
   const [loaded, setLoaded] = useState(false);
+  const [authLoaded, setAuthLoaded] =
+    useState(false);
   const [error, setError] = useState("");
-  const [approvingParty, setApprovingParty] = useState<
-    "buyer" | "supplier" | null
-  >(null);
+  const [approving, setApproving] =
+    useState(false);
 
   const loadSettlement = useCallback(async () => {
     try {
@@ -97,19 +116,65 @@ export default function SettlementApprovals() {
     }
   }, []);
 
-  useEffect(() => {
-    void loadSettlement();
-  }, [loadSettlement]);
+  const loadAuth = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "/api/auth/me?dealId=DEAL-1048",
+        {
+          method: "GET",
+          cache: "no-store",
+        }
+      );
 
-  async function approve(
-    party: "buyer" | "supplier"
-  ) {
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message ??
+            "Could not load authenticated identity."
+        );
+      }
+
+      setAuth({
+        authenticated:
+          data.authenticated === true,
+        email: data.user?.email ?? null,
+        role:
+          data.role === "buyer" ||
+          data.role === "supplier"
+            ? data.role
+            : null,
+      });
+    } catch (err) {
+      console.error(
+        "Could not load authenticated identity:",
+        err
+      );
+
+      setAuth({
+        authenticated: false,
+        email: null,
+        role: null,
+      });
+    } finally {
+      setAuthLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.all([
+      loadSettlement(),
+      loadAuth(),
+    ]);
+  }, [loadSettlement, loadAuth]);
+
+  async function approve() {
     if (!settlement?.proposalVersion) {
       return;
     }
 
     try {
-      setApprovingParty(party);
+      setApproving(true);
       setError("");
 
       const response = await fetch(
@@ -123,7 +188,6 @@ export default function SettlementApprovals() {
             dealId: settlement.dealId,
             proposalVersion:
               settlement.proposalVersion,
-            party,
           }),
         }
       );
@@ -133,14 +197,17 @@ export default function SettlementApprovals() {
       if (!response.ok || !data.success) {
         throw new Error(
           data.message ??
-            `Could not record ${party} approval.`
+            "Could not record approval."
         );
       }
 
-      await loadSettlement();
+      await Promise.all([
+        loadSettlement(),
+        loadAuth(),
+      ]);
     } catch (err) {
       console.error(
-        `Could not record ${party} approval:`,
+        "Could not record approval:",
         err
       );
 
@@ -150,11 +217,11 @@ export default function SettlementApprovals() {
           : "Could not record approval."
       );
     } finally {
-      setApprovingParty(null);
+      setApproving(false);
     }
   }
 
-  if (!loaded) {
+  if (!loaded || !authLoaded) {
     return (
       <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-5">
         <p className="text-[13px] text-[#837C8C]">
@@ -187,7 +254,8 @@ export default function SettlementApprovals() {
   }
 
   const agreementReached =
-    settlement.negotiation?.agreement?.reached === true;
+    settlement.negotiation?.agreement?.reached ===
+    true;
 
   const hasValidProposal =
     agreementReached &&
@@ -213,6 +281,24 @@ export default function SettlementApprovals() {
     bothApproved &&
     settlement.status === "approved";
 
+  const buyerCanApprove =
+    auth.authenticated &&
+    auth.role === "buyer" &&
+    !buyerApproved &&
+    hasValidProposal &&
+    !approving &&
+    !isExecuting &&
+    !isCompleted;
+
+  const supplierCanApprove =
+    auth.authenticated &&
+    auth.role === "supplier" &&
+    !supplierApproved &&
+    hasValidProposal &&
+    !approving &&
+    !isExecuting &&
+    !isCompleted;
+
   return (
     <>
       <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
@@ -223,7 +309,8 @@ export default function SettlementApprovals() {
             </p>
 
             <p className="mt-1 text-[14px] font-semibold text-[#302A42]">
-              ${settlement.settlementAmount.toLocaleString(
+              $
+              {settlement.settlementAmount.toLocaleString(
                 "en-US",
                 {
                   minimumFractionDigits: 2,
@@ -233,18 +320,66 @@ export default function SettlementApprovals() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-  {settlement.evidenceAnalysisVersion && (
-    <span className="rounded-[8px] bg-[#FFF2F8] px-3 py-2 font-mono text-[10px] font-semibold text-[#D94893]">
-      Evidence {settlement.evidenceAnalysisVersion}
-    </span>
-  )}
+            {settlement.evidenceAnalysisVersion && (
+              <span className="rounded-[8px] bg-[#FFF2F8] px-3 py-2 font-mono text-[10px] font-semibold text-[#D94893]">
+                Evidence{" "}
+                {
+                  settlement.evidenceAnalysisVersion
+                }
+              </span>
+            )}
 
-  <span className="rounded-[8px] bg-[#F4F1FC] px-3 py-2 font-mono text-[10px] font-semibold text-[#4D35F3]">
-    Proposal {settlement.proposalVersion}
-  </span>
-</div>
+            <span className="rounded-[8px] bg-[#F4F1FC] px-3 py-2 font-mono text-[10px] font-semibold text-[#4D35F3]">
+              Proposal{" "}
+              {settlement.proposalVersion}
+            </span>
+          </div>
         </div>
       </div>
+
+      {!auth.authenticated &&
+        !isCompleted && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#E8E4EE] bg-[#FAF9FC] px-5 py-3">
+            <div>
+              <p className="text-[13px] font-semibold text-[#302A42]">
+                Authentication required
+              </p>
+
+              <p className="mt-1 text-[12px] text-[#837C8C]">
+                Sign in as the buyer or supplier
+                assigned to this deal to approve.
+              </p>
+            </div>
+
+            <Link
+              href="/login"
+              className="flex h-[40px] items-center rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white"
+            >
+              Sign in to approve
+            </Link>
+          </div>
+        )}
+
+      {auth.authenticated && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#E8E4EE] bg-[#FAF9FC] px-5 py-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#918A98]">
+              Authenticated identity
+            </p>
+
+            <p className="mt-1 text-[13px] font-semibold text-[#302A42]">
+              {auth.email ??
+                "Authenticated user"}
+            </p>
+          </div>
+
+          <span className="rounded-[8px] bg-[#EEEAFE] px-3 py-2 text-[11px] font-semibold capitalize text-[#4D35F3]">
+            {auth.role
+              ? `${auth.role} role`
+              : "No deal role"}
+          </span>
+        </div>
+      )}
 
       <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
         <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
@@ -270,22 +405,21 @@ export default function SettlementApprovals() {
                 <CheckIcon />
                 Approved
               </span>
-            ) : (
+            ) : auth.role === "buyer" ? (
               <button
                 type="button"
-                onClick={() => void approve("buyer")}
-                disabled={
-                  !hasValidProposal ||
-                  approvingParty !== null ||
-                  isExecuting ||
-                  isCompleted
-                }
+                onClick={() => void approve()}
+                disabled={!buyerCanApprove}
                 className="h-[40px] rounded-[9px] bg-[#FF67B6] px-4 text-[12px] font-semibold text-white transition hover:bg-[#F45DAD] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
-                {approvingParty === "buyer"
+                {approving
                   ? "Approving…"
                   : "Approve"}
               </button>
+            ) : (
+              <span className="rounded-[8px] bg-[#F4F2F6] px-3 py-2 text-[11px] font-semibold text-[#8B8495]">
+                Buyer only
+              </span>
             )}
           </div>
         </section>
@@ -313,24 +447,24 @@ export default function SettlementApprovals() {
                 <CheckIcon />
                 Approved
               </span>
-            ) : (
+            ) : auth.role ===
+              "supplier" ? (
               <button
                 type="button"
-                onClick={() =>
-                  void approve("supplier")
-                }
+                onClick={() => void approve()}
                 disabled={
-                  !hasValidProposal ||
-                  approvingParty !== null ||
-                  isExecuting ||
-                  isCompleted
+                  !supplierCanApprove
                 }
                 className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
-                {approvingParty === "supplier"
+                {approving
                   ? "Approving…"
                   : "Approve"}
               </button>
+            ) : (
+              <span className="rounded-[8px] bg-[#F4F2F6] px-3 py-2 text-[11px] font-semibold text-[#8B8495]">
+                Supplier only
+              </span>
             )}
           </div>
         </section>
@@ -360,8 +494,8 @@ export default function SettlementApprovals() {
               : isExecuting
                 ? "DealDone is executing the approved proposal through PayPal."
                 : canExecute
-                  ? "Both parties approved the exact server-authoritative proposal. It is ready for PayPal execution."
-                  : "Both buyer and supplier must approve the exact proposal stored by DealDone before payment execution."}
+                  ? "Both authenticated parties approved the exact server-authoritative proposal. It is ready for PayPal execution."
+                  : "The authenticated buyer and supplier must independently approve the exact proposal stored by DealDone before payment execution."}
           </p>
         </div>
 
@@ -374,11 +508,17 @@ export default function SettlementApprovals() {
           </Link>
         ) : canExecute ? (
           <ExecutePayPalSettlement
-  dealId={settlement.dealId}
-  proposalVersion={settlement.proposalVersion}
-  settlementAmount={settlement.settlementAmount}
-  originalAmount={settlement.originalAmount}
-/>
+            dealId={settlement.dealId}
+            proposalVersion={
+              settlement.proposalVersion
+            }
+            settlementAmount={
+              settlement.settlementAmount
+            }
+            originalAmount={
+              settlement.originalAmount
+            }
+          />
         ) : (
           <button
             type="button"
