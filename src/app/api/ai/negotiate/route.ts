@@ -205,10 +205,30 @@ if (!evidenceAnalysis?.analysis_version) {
 const evidenceAnalysisVersion =
   evidenceAnalysis.analysis_version;
 
+  const {
+  data: demoState,
+  error: demoStateError,
+} = await supabaseServer
+  .from("deal_demo_state")
+  .select("active_run_id, run_number")
+  .eq("deal_id", "DEAL-1048")
+  .single();
+
+if (demoStateError || !demoState?.active_run_id) {
+  throw new Error(
+    demoStateError?.message ??
+      "Could not load the active DealDone demo run."
+  );
+}
+
+const demoRunId = demoState.active_run_id;
+const demoRunNumber = demoState.run_number;
+
     const proposalVersion = createHash("sha256")
   .update(
     JSON.stringify({
       dealId: "DEAL-1048",
+      demoRunId,
       evidenceAnalysisVersion,
       buyerFinal,
       supplierFinal,
@@ -220,6 +240,8 @@ const evidenceAnalysisVersion =
 
   const negotiationPayload = {
   dealId: "DEAL-1048",
+  demoRunId,
+demoRunNumber,
   evidenceAnalysisVersion,
 
   buyer: {
