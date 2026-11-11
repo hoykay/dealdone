@@ -68,9 +68,22 @@ export default function HeroVisual() {
         {/* Evidence */}
         <div className="mt-4 flex items-center justify-between border-b border-[#ECE9F1] px-2 py-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[11px] bg-[#F1EDFF] text-[18px] text-[#6047FF]">
-              ▤
-            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-[11px] bg-[#F1EDFF] text-[#6047FF]">
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M7 3.5h7l4 4V20H7z" />
+    <path d="M14 3.5V8h4" />
+    <path d="m9.5 14 1.7 1.7 3.8-4" />
+  </svg>
+</div>
 
             <div>
               <p className="text-[14px] font-semibold text-[#211C37]">
