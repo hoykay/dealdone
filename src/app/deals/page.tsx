@@ -155,15 +155,6 @@ export default function DealsPage() {
                 className="w-full bg-transparent text-[12px] text-[#29233B] outline-none placeholder:text-[#AAA4B2]"
               />
             </div>
-
-            {/* New deal */}
-            <button
-              type="button"
-              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[9px] bg-[#FF67B6] px-5 text-[12px] font-semibold text-white shadow-[0_8px_20px_rgba(255,103,182,0.22)] transition hover:-translate-y-[1px] hover:bg-[#F55EAE]"
-            >
-              <span className="text-[18px] font-light leading-none">+</span>
-              New deal
-            </button>
           </div>
         </div>
 

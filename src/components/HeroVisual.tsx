@@ -34,7 +34,7 @@ export default function HeroVisual() {
             <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#33A469] text-[11px]">
               ✓
             </span>
-            Resolved
+            Demo outcome
           </div>
         </div>
 
@@ -91,7 +91,7 @@ export default function HeroVisual() {
               </p>
 
               <p className="mt-1 text-[12px] text-[#777181]">
-                4 sources · 2 discrepancies
+                5 sources · 2 discrepancies
               </p>
             </div>
           </div>

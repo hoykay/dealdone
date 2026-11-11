@@ -320,20 +320,6 @@ useEffect(() => {
     <span className="hidden text-[12px] font-medium text-[#393348] sm:block">
       Acme Manufacturing
     </span>
-
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-[#8A8495]"
-    >
-      <path d="m8 10 4 4 4-4" />
-    </svg>
   </button>
 
   <div className="h-6 w-px bg-[#E8E4EE]" />
