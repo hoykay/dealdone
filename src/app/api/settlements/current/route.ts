@@ -21,6 +21,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const {
+  data: demoState,
+  error: demoStateError,
+} = await supabaseServer
+  .from("deal_demo_state")
+  .select("active_run_id")
+  .eq("deal_id", dealId)
+  .single();
+
+if (demoStateError || !demoState?.active_run_id) {
+  return NextResponse.json(
+    {
+      success: false,
+      message:
+        "Could not load the active demo run.",
+    },
+    { status: 500 }
+  );
+}
+
+const activeRunId = demoState.active_run_id;
+
     const { data: settlement, error } = await supabaseServer
       .from("deal_settlements")
       .select(
@@ -43,7 +65,11 @@ export async function GET(request: NextRequest) {
         `
       )
       .eq("deal_id", dealId)
-      .order("created_at", { ascending: false })
+.eq(
+  "negotiation_payload->>demoRunId",
+  activeRunId
+)
+.order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 

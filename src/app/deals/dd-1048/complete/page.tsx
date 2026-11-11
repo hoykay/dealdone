@@ -69,10 +69,10 @@ export default async function CompletePage({
               Deal done.
             </h1>
 
-            <p className="mx-auto mt-3 max-w-[620px] text-[15px] leading-[1.6] text-[#6F687A]">
-              The agreed settlement has been executed successfully through
-              PayPal.
-            </p>
+            <p className="mx-auto mt-3 max-w-[680px] text-[15px] leading-[1.6] text-[#6F687A]">
+  PayPal captured $15,930 for Nova Packaging, released $2,070 back
+  to the buyer, and DealDone independently verified the final payment state.
+</p>
           </div>
 
           {/* Actions */}
@@ -111,9 +111,15 @@ export default async function CompletePage({
                   Completed
                 </span>
 
-                <div className="flex h-9 items-center rounded-[8px] bg-[#F4F1FC] px-3 text-[13px] font-bold text-[#32207E]">
-                  PayPal
-                </div>
+                <div className="flex h-9 items-center gap-2 rounded-[8px] bg-[#F4F1FC] px-3">
+  <span className="text-[13px] font-bold text-[#32207E]">
+    PayPal
+  </span>
+
+  <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.06em] text-[#756E80]">
+    Sandbox
+  </span>
+</div>
               </div>
             </div>
 
@@ -150,53 +156,65 @@ export default async function CompletePage({
               </div>
             </div>
 
-            {/* Transaction detail rows */}
-            <div className="border-t border-[#EEEAF2] px-6 py-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-  <div>
-    <p className="text-[12px] font-medium text-[#8A8393]">
-      PayPal order ID
-    </p>
+            {/* Transaction verification */}
+<div className="border-t border-[#EEEAF2] px-6 py-4">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-[13px] font-semibold text-[#29233D]">
+        PayPal verification
+      </p>
 
-    <p className="mt-1.5 break-all text-[12px] font-semibold text-[#393248]">
-      {orderId ?? "Not available"}
-    </p>
+      <p className="mt-1 text-[11px] text-[#8A8393]">
+        Transaction identifiers independently verified by DealDone
+      </p>
+    </div>
+
+    <span className="rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[10px] font-semibold text-[#21865A]">
+      ✓ Verified
+    </span>
   </div>
 
-  <div>
-    <p className="text-[12px] font-medium text-[#8A8393]">
-      Authorization ID
-    </p>
+  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="rounded-[9px] bg-[#F8F7FA] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#928B99]">
+        Order ID
+      </p>
 
-    <p className="mt-1.5 break-all text-[12px] font-semibold text-[#393248]">
-      {authorizationId ?? "Not available"}
-    </p>
+      <p className="mt-1.5 break-all font-mono text-[11px] font-semibold text-[#393248]">
+        {orderId ?? "Not available"}
+      </p>
+    </div>
+
+    <div className="rounded-[9px] bg-[#F8F7FA] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#928B99]">
+        Authorization ID
+      </p>
+
+      <p className="mt-1.5 break-all font-mono text-[11px] font-semibold text-[#393248]">
+        {authorizationId ?? "Not available"}
+      </p>
+    </div>
+
+    <div className="rounded-[9px] bg-[#F8F7FA] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#928B99]">
+        Capture ID
+      </p>
+
+      <p className="mt-1.5 break-all font-mono text-[11px] font-semibold text-[#393248]">
+        {captureId ?? "Not available"}
+      </p>
+    </div>
   </div>
 
-  <div>
-  <p className="text-[12px] font-medium text-[#8A8393]">
-    Capture ID
-  </p>
+  <div className="mt-3 flex items-center justify-between rounded-[9px] bg-[#F8F7FA] px-3 py-2.5">
+    <span className="text-[11px] font-medium text-[#8A8393]">
+      Completed
+    </span>
 
-  <p className="mt-1.5 break-all text-[12px] font-semibold text-[#393248]">
-    {captureId ?? "Not available"}
-  </p>
-</div>
-</div>
-</div>
-
-<div>
-  <p className="text-[12px] font-medium text-[#8A8393]">
-    Completed at
-  </p>
-
-  <p className="mt-1.5 text-[13px] font-semibold text-[#393248]">
-    <CompletionTimestamp completedAt={completedAt} />
-  </p>
-</div>
-</div>
+    <span className="text-[12px] font-semibold text-[#393248]">
+      <CompletionTimestamp completedAt={completedAt} />
+    </span>
+  </div>
 </div>
 
             {/* Final explanation */}
@@ -206,8 +224,7 @@ export default async function CompletePage({
               </div>
 
               <p className="text-[12px] leading-[1.6] text-[#665E73]">
-                DealDone captured the agreed amount and released the remaining
-                authorization through PayPal.
+                DealDone executed the exact dual-approved settlement through PayPal and independently verified the capture and authorization release.
               </p>
             </div>
           </section>

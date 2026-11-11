@@ -10,8 +10,8 @@ const deals = [
     issue: "Delivery discrepancy",
     detail: "60 missing · 70 damaged",
     amount: "$18,000",
-    status: "Negotiating",
-    updated: "2 hours ago",
+    status: "Evidence review",
+updated: "Just now",
     image: "NP",
   },
   {
@@ -168,32 +168,32 @@ export default function DealsPage() {
         </div>
 
         {/* Filters */}
-        <div className="mt-7 flex flex-wrap gap-2">
-          <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] bg-[#EEEAFE] px-3.5 text-[11px] font-semibold text-[#4E35EE]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#4E35EE]" />
-            All (18)
-          </button>
+<div className="mt-7 flex flex-wrap gap-2">
+  <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] bg-[#EEEAFE] px-3.5 text-[11px] font-semibold text-[#4E35EE]">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#4E35EE]" />
+    All (5)
+  </button>
 
-          <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#F04463]" />
-            At risk (3)
-          </button>
+  <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#5A3FF4]" />
+    Evidence review (2)
+  </button>
 
-          <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#FF8A3D]" />
-            Negotiating (5)
-          </button>
+  <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#F04463]" />
+    At risk (1)
+  </button>
 
-          <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#6046F4]" />
-            Awaiting approval (2)
-          </button>
+  <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#6046F4]" />
+    Awaiting approval (1)
+  </button>
 
-          <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#24945F]" />
-            Settled (8)
-          </button>
-        </div>
+  <button className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-[#E8E4ED] bg-white px-3.5 text-[11px] font-medium text-[#625C70]">
+    <span className="h-1.5 w-1.5 rounded-full bg-[#24945F]" />
+    Settled (1)
+  </button>
+</div>
 
         {/* Table */}
         <div className="mt-5 overflow-hidden rounded-[12px] border border-[#EBE7F0] bg-white">

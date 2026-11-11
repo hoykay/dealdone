@@ -301,41 +301,44 @@ export default function SettlementApprovals() {
 
   return (
     <>
-      <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#918A98]">
-              Server-authoritative proposal
-            </p>
+      <div className="mt-3 rounded-[12px] border border-[#E8E4EE] bg-white px-5 py-4">
+  <div className="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p className="text-[14px] font-semibold text-[#302A42]">
+        Approval-ready settlement
+      </p>
 
-            <p className="mt-1 text-[14px] font-semibold text-[#302A42]">
-              $
-              {settlement.settlementAmount.toLocaleString(
-                "en-US",
-                {
-                  minimumFractionDigits: 2,
-                }
-              )}
-            </p>
-          </div>
+      <p className="mt-1 text-[12px] text-[#837C8C]">
+        The negotiated proposal is locked to the validated evidence.
+      </p>
+    </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {settlement.evidenceAnalysisVersion && (
-              <span className="rounded-[8px] bg-[#FFF2F8] px-3 py-2 font-mono text-[10px] font-semibold text-[#D94893]">
-                Evidence{" "}
-                {
-                  settlement.evidenceAnalysisVersion
-                }
-              </span>
-            )}
+    <div className="flex items-center gap-3">
+      <span className="text-[20px] font-semibold tracking-[-0.03em] text-[#171332]">
+        $
+        {settlement.settlementAmount.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+        })}
+      </span>
 
-            <span className="rounded-[8px] bg-[#F4F1FC] px-3 py-2 font-mono text-[10px] font-semibold text-[#4D35F3]">
-              Proposal{" "}
-              {settlement.proposalVersion}
-            </span>
-          </div>
-        </div>
-      </div>
+      <span className="rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[11px] font-semibold text-[#21865A]">
+        ✓ Integrity verified
+      </span>
+    </div>
+  </div>
+
+  <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-[#A09AA7]">
+    {settlement.evidenceAnalysisVersion && (
+      <span>
+        Evidence ref · {settlement.evidenceAnalysisVersion.slice(0, 8)}
+      </span>
+    )}
+
+    <span>
+      Proposal ref · {settlement.proposalVersion.slice(0, 8)}
+    </span>
+  </div>
+</div>
 
       {!auth.authenticated &&
         !isCompleted && (
@@ -361,25 +364,43 @@ export default function SettlementApprovals() {
         )}
 
       {auth.authenticated && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#E8E4EE] bg-[#FAF9FC] px-5 py-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#918A98]">
-              Authenticated identity
-            </p>
+  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#E8E4EE] bg-[#FAF9FC] px-5 py-4">
+    <div className="flex items-center gap-3">
+      <div
+        className={[
+          "flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-semibold",
+          auth.role === "buyer"
+            ? "bg-[#FCEAF5] text-[#E14999]"
+            : "bg-[#EEEAFE] text-[#4D35F3]",
+        ].join(" ")}
+      >
+        {auth.role === "buyer" ? "AC" : "NP"}
+      </div>
 
-            <p className="mt-1 text-[13px] font-semibold text-[#302A42]">
-              {auth.email ??
-                "Authenticated user"}
-            </p>
-          </div>
+      <div>
+        <p className="text-[14px] font-semibold text-[#302A42]">
+          {auth.role === "buyer"
+            ? "Signed in as Buyer"
+            : auth.role === "supplier"
+              ? "Signed in as Supplier"
+              : "Signed in"}
+        </p>
 
-          <span className="rounded-[8px] bg-[#EEEAFE] px-3 py-2 text-[11px] font-semibold capitalize text-[#4D35F3]">
-            {auth.role
-              ? `${auth.role} role`
-              : "No deal role"}
-          </span>
-        </div>
-      )}
+        <p className="mt-0.5 text-[12px] text-[#837C8C]">
+          {auth.role === "buyer"
+            ? "Acme Manufacturing"
+            : auth.role === "supplier"
+              ? "Nova Packaging"
+              : auth.email ?? "Authenticated user"}
+        </p>
+      </div>
+    </div>
+
+    <span className="rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[11px] font-semibold text-[#21865A]">
+      ✓ Identity verified
+    </span>
+  </div>
+)}
 
       <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
         <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
@@ -413,12 +434,12 @@ export default function SettlementApprovals() {
                 className="h-[40px] rounded-[9px] bg-[#FF67B6] px-4 text-[12px] font-semibold text-white transition hover:bg-[#F45DAD] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
                 {approving
-                  ? "Approving…"
-                  : "Approve"}
+  ? "Approving…"
+  : `Approve $${settlement.settlementAmount.toLocaleString("en-US")}`}
               </button>
             ) : (
               <span className="rounded-[8px] bg-[#F4F2F6] px-3 py-2 text-[11px] font-semibold text-[#8B8495]">
-                Buyer only
+                Waiting for buyer
               </span>
             )}
           </div>
@@ -458,12 +479,12 @@ export default function SettlementApprovals() {
                 className="h-[40px] rounded-[9px] bg-[#4D35F3] px-4 text-[12px] font-semibold text-white transition hover:bg-[#3E29DB] disabled:cursor-not-allowed disabled:bg-[#DDD9E4] disabled:text-[#8B8495]"
               >
                 {approving
-                  ? "Approving…"
-                  : "Approve"}
+  ? "Approving…"
+  : `Approve $${settlement.settlementAmount.toLocaleString("en-US")}`}
               </button>
             ) : (
               <span className="rounded-[8px] bg-[#F4F2F6] px-3 py-2 text-[11px] font-semibold text-[#8B8495]">
-                Supplier only
+                Waiting for supplier
               </span>
             )}
           </div>
@@ -495,7 +516,7 @@ export default function SettlementApprovals() {
                 ? "DealDone is executing the approved proposal through PayPal."
                 : canExecute
                   ? "Both authenticated parties approved the exact server-authoritative proposal. It is ready for PayPal execution."
-                  : "The authenticated buyer and supplier must independently approve the exact proposal stored by DealDone before payment execution."}
+                  : "Buyer and supplier must both approve this exact settlement before PayPal can execute the payment."}
           </p>
         </div>
 
@@ -526,8 +547,8 @@ export default function SettlementApprovals() {
             className="flex h-[44px] min-w-[235px] cursor-not-allowed items-center justify-center rounded-[9px] bg-[#DDD9E4] px-6 text-[13px] font-semibold text-[#8B8495]"
           >
             {isExecuting
-              ? "Settlement in progress"
-              : "Execute settlement via PayPal"}
+  ? "Settlement in progress"
+  : "Waiting for both approvals"}
           </button>
         )}
       </div>

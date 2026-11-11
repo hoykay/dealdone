@@ -324,11 +324,11 @@ export default function LiveSettlementBreakdown() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[13px] font-semibold">
-              PayPal execution
-            </p>
+  Planned PayPal settlement
+</p>
 
             <p className="mt-1 text-[12px] text-white/60">
-              Authorization → partial capture → release remainder
+              Executes only after buyer and supplier approval
             </p>
           </div>
 
@@ -340,7 +340,7 @@ export default function LiveSettlementBreakdown() {
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-[8px] bg-white/7 px-3 py-2.5">
             <p className="text-[11px] text-white/55">
-              Capture
+              Planned capture
             </p>
 
             <p className="mt-1 text-[15px] font-semibold">
@@ -350,7 +350,7 @@ export default function LiveSettlementBreakdown() {
 
           <div className="rounded-[8px] bg-white/7 px-3 py-2.5">
             <p className="text-[11px] text-white/55">
-              Release
+              Planned release
             </p>
 
             <p className="mt-1 text-[15px] font-semibold text-[#FF8FC8]">
@@ -362,8 +362,8 @@ export default function LiveSettlementBreakdown() {
         <div className="mt-3 rounded-[8px] bg-white/10 px-3 py-2">
           <p className="text-[10px] font-semibold text-white/80">
             {negotiatedSettlement !== null
-              ? "✓ Server-backed evidence → bounded negotiation → agreed settlement"
-              : "✓ Calculated from validated evidence"}
+  ? "✓ Evidence-backed agreement ready for dual approval"
+  : "✓ Calculated from validated evidence"}
           </p>
         </div>
       </div>

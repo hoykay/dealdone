@@ -103,11 +103,11 @@ export default function LiveNegotiationTimeline() {
     return (
       <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-[14px] font-semibold text-[#29233D]">
-            Live negotiation
+          <h2 className="text-[16px] font-semibold text-[#29233D]">
+            Agent negotiation
           </h2>
 
-          <span className="rounded-full bg-[#F3EEFF] px-2.5 py-1 text-[10px] font-semibold text-[#5D43E8]">
+          <span className="rounded-full bg-[#F3EEFF] px-2.5 py-1 text-[11px] font-semibold text-[#5D43E8]">
             Running agents…
           </span>
         </div>
@@ -122,8 +122,8 @@ export default function LiveNegotiationTimeline() {
   if (error || !result?.negotiation) {
     return (
       <section className="rounded-[12px] border border-[#F0D7DF] bg-white p-4">
-        <h2 className="text-[14px] font-semibold text-[#29233D]">
-          Live negotiation
+        <h2 className="text-[16px] font-semibold text-[#29233D]">
+          Agent negotiation
         </h2>
 
         <p className="mt-3 text-[12px] text-[#B24E6B]">
@@ -137,16 +137,16 @@ export default function LiveNegotiationTimeline() {
     <section className="rounded-[12px] border border-[#E9E5EE] bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[14px] font-semibold text-[#29233D]">
-            Live negotiation
+          <h2 className="text-[16px] font-semibold text-[#29233D]">
+            Agent negotiation
           </h2>
 
-          <p className="mt-1 text-[11px] text-[#8A8493]">
-            AI opening positions · deterministic bounded negotiation
+          <p className="mt-1 text-[12px] text-[#8A8493]">
+            Buyer and supplier AI agents negotiate within evidence-backed mandates
           </p>
         </div>
 
-        <span className="rounded-full bg-[#EAF8F0] px-2.5 py-1 text-[10px] font-semibold text-[#21865A]">
+        <span className="rounded-full bg-[#EAF8F0] px-2.5 py-1 text-[11px] font-semibold text-[#21865A]">
           ✓ Agreement reached
         </span>
       </div>
@@ -155,16 +155,16 @@ export default function LiveNegotiationTimeline() {
         {result.negotiation.rounds.map((round) => (
           <div
             key={round.round}
-            className="rounded-[10px] border border-[#EEEAF2] bg-[#FCFBFD] p-3"
+            className="rounded-[11px] border border-[#EEEAF2] bg-[#FCFBFD] p-3"
           >
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8A8392]">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#8A8392]">
                 Round {round.round}
               </p>
 
               {round.round ===
                 result.negotiation?.agreement.round && (
-                <span className="text-[10px] font-semibold text-[#21865A]">
+                <span className="text-[11px] font-semibold text-[#21865A]">
                   Agreement
                 </span>
               )}
@@ -173,7 +173,7 @@ export default function LiveNegotiationTimeline() {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-[9px] bg-[#FFF1F8] p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold text-[#D94893]">
+                  <p className="text-[12px] font-semibold text-[#D94893]">
                     Buyer agent
                   </p>
 
@@ -182,12 +182,18 @@ export default function LiveNegotiationTimeline() {
                   </p>
                 </div>
 
-                <p className="mt-1 text-[10px] text-[#8A7180]">
+                <p className="mt-1 text-[11px] text-[#8A7180]">
                   {round.buyer.type}
                 </p>
 
+                {round.buyer.reasoning && (
+  <p className="mt-2 text-[12px] leading-[1.5] text-[#6F687A]">
+    {round.buyer.reasoning}
+  </p>
+)}
+
                 {round.buyer.constraint && (
-                  <p className="mt-2 text-[10px] font-medium text-[#B15B85]">
+                  <p className="mt-2 text-[11px] font-medium text-[#B15B85]">
                     {round.buyer.constraint}
                   </p>
                 )}
@@ -195,7 +201,7 @@ export default function LiveNegotiationTimeline() {
 
               <div className="rounded-[9px] bg-[#F2EFFF] p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold text-[#543CE5]">
+                  <p className="text-[12px] font-semibold text-[#543CE5]">
                     Supplier agent
                   </p>
 
@@ -204,12 +210,18 @@ export default function LiveNegotiationTimeline() {
                   </p>
                 </div>
 
-                <p className="mt-1 text-[10px] text-[#777088]">
+                <p className="mt-1 text-[11px] text-[#777088]">
                   {round.supplier.type}
                 </p>
 
+                {round.supplier.reasoning && (
+  <p className="mt-2 text-[12px] leading-[1.5] text-[#6F687A]">
+    {round.supplier.reasoning}
+  </p>
+)}
+
                 {round.supplier.constraint && (
-                  <p className="mt-2 text-[10px] font-medium text-[#6354AE]">
+                  <p className="mt-2 text-[11px] font-medium text-[#6354AE]">
                     {round.supplier.constraint}
                   </p>
                 )}
@@ -219,14 +231,14 @@ export default function LiveNegotiationTimeline() {
         ))}
       </div>
 
-      <div className="mt-4 rounded-[10px] bg-[#171332] px-4 py-3">
+      <div className="mt-4 rounded-[11px] bg-[#171332] px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#BEB8D1]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#BEB8D1]">
               Negotiated agreement
             </p>
 
-            <p className="mt-1 text-[11px] text-[#D8D3E5]">
+            <p className="mt-1 text-[12px] text-[#D8D3E5]">
               Pending dual human approval
             </p>
           </div>

@@ -33,7 +33,7 @@ export default function LoginPage() {
         throw signInError;
       }
 
-      router.push("/deals/dd-1048/settlement");
+      router.push("/deals");
       router.refresh();
     } catch (err) {
       console.error("Login failed:", err);

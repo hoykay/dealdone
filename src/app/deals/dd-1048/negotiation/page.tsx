@@ -2,6 +2,7 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import LiveDealDoneProposal from "@/components/negotiation/LiveDealDoneProposal";
 import LiveNegotiationTimeline from "@/components/negotiation/LiveNegotiationTimeline";
+import DealWorkspaceHeader from "@/components/deal/DealWorkspaceHeader";
 
 function Tab({
   label,
@@ -52,28 +53,8 @@ export default function NegotiationPage() {
   return (
     <AppShell>
       <div className="px-5 py-4 sm:px-7 lg:px-8">
-        {/* Deal tabs */}
-        <div className="flex overflow-x-auto border-b border-[#ECE8F1]">
-          <Tab label="Overview" href="/deals/dd-1048" />
-          <Tab label="Evidence" href="/deals/dd-1048" />
-          <Tab label="Negotiation" active />
-          <Tab
-            label="Settlement"
-            href="/deals/dd-1048/settlement"
-          />
-        </div>
 
-        {/* Page title */}
-        <div className="mt-4">
-          <h1 className="editorial text-[32px] leading-none tracking-[-0.04em] text-[#171332]">
-            Negotiation
-          </h1>
-
-          <p className="mt-1.5 text-[14px] text-[#827B8B]">
-            DealDone helps both sides reach a fair settlement based on real evidence.
-          </p>
-        </div>
-
+      <DealWorkspaceHeader activeTab="negotiation" />
         {/* Main layout */}
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr_0.92fr]">
           {/* BUYER POSITION */}

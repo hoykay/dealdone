@@ -126,9 +126,27 @@ export default async function PaymentRecordPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-[14px] border border-[#E9E5EE] bg-white p-5">
-            <h2 className="text-[16px] font-semibold text-[#29233D]">
-              PayPal transaction
-            </h2>
+            <div className="flex items-center justify-between gap-3">
+  <div>
+    <h2 className="text-[16px] font-semibold text-[#29233D]">
+      PayPal transaction
+    </h2>
+
+    <p className="mt-1 text-[12px] text-[#837C8C]">
+      Independently verified against the final PayPal state
+    </p>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <span className="rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[10px] font-semibold text-[#21865A]">
+      ✓ Verified
+    </span>
+
+    <span className="rounded-full bg-[#F4F1FC] px-3 py-1.5 text-[10px] font-semibold text-[#4D35F3]">
+      PayPal Sandbox
+    </span>
+  </div>
+</div>
 
             <div className="mt-5 space-y-4">
               <div>
@@ -250,9 +268,15 @@ export default async function PaymentRecordPage() {
               </p>
             </div>
 
-            <span className="rounded-[8px] bg-[#F4F1FC] px-3 py-2 font-mono text-[12px] font-semibold text-[#4D35F3]">
-              {settlement.proposal_version}
-            </span>
+            <div className="text-right">
+  <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#928B99]">
+    Proposal integrity
+  </p>
+
+  <span className="mt-1 inline-flex rounded-full bg-[#EAF8F0] px-3 py-1.5 text-[10px] font-semibold text-[#21865A]">
+    ✓ Verified · {settlement.proposal_version.slice(0, 8)}
+  </span>
+</div>
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">

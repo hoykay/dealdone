@@ -2,75 +2,14 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import SettlementApprovals from "@/components/approvals/SettlementApprovals";
 import LiveSettlementBreakdown from "@/components/settlement/LiveSettlementBreakdown";
-
-function Tab({
-  label,
-  active,
-  href,
-}: {
-  label: string;
-  active?: boolean;
-  href?: string;
-}) {
-  const classes = [
-    "relative flex h-[46px] items-center px-5 text-[16px] font-semibold transition",
-    active
-      ? "text-[#4D35F3]"
-      : "text-[#716B7C] hover:text-[#2A243B]",
-  ].join(" ");
-
-  const content = (
-    <>
-      {label}
-
-      {active && (
-        <span className="absolute inset-x-4 bottom-0 h-[3px] rounded-full bg-[#FF67B6]" />
-      )}
-    </>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} className={classes}>
-        {content}
-      </Link>
-    );
-  }
-
-  return <div className={classes}>{content}</div>;
-}
+import DealWorkspaceHeader from "@/components/deal/DealWorkspaceHeader";
 
 export default function SettlementPage() {
   return (
     <AppShell>
       <div className="px-5 py-3 sm:px-7 lg:px-8">
-        {/* Tabs */}
-        <div className="flex overflow-x-auto border-b border-[#ECE8F1]">
-          <Tab label="Overview" href="/deals/dd-1048" />
-          <Tab label="Evidence" href="/deals/dd-1048" />
-          <Tab
-            label="Negotiation"
-            href="/deals/dd-1048/negotiation"
-          />
-          <Tab label="Settlement" active />
-        </div>
 
-        {/* Heading */}
-        <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="editorial text-[34px] leading-none tracking-[-0.04em] text-[#171332]">
-              Settlement & approval
-            </h1>
-
-            <p className="mt-2 text-[14px] text-[#777181]">
-              Review the final settlement before PayPal executes the agreed payment.
-            </p>
-          </div>
-
-          <div className="rounded-[9px] bg-[#FCEAF5] px-4 py-2 text-[13px] font-semibold text-[#E14999]">
-  Final agreement · awaiting approvals
-</div>
-        </div>
+<DealWorkspaceHeader activeTab="settlement" />
 
         {/* Main upper grid */}
 <div className="mt-3 grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
@@ -140,10 +79,13 @@ export default function SettlementPage() {
       </div>
 
       <div className="flex items-center gap-4 rounded-[10px] border border-[#ECE8F1] px-3 py-2">
-        <div className="relative h-[52px] w-[58px] shrink-0 overflow-hidden rounded-[8px] bg-[linear-gradient(145deg,#776A73,#C5A79F)]">
-          <div className="absolute bottom-2 left-2 h-[17px] w-[20px] rounded-[3px] bg-[#755DE7]/50" />
-          <div className="absolute bottom-2 right-2 h-[20px] w-[22px] rounded-[3px] bg-[#E15F9A]/55" />
-        </div>
+        <div className="h-[52px] w-[58px] shrink-0 overflow-hidden rounded-[8px]">
+  <img
+    src="/evidence/deal-1048/warehouse-photo.png"
+    alt="Warehouse damage evidence"
+    className="h-full w-full object-cover"
+  />
+</div>
 
         <div>
           <p className="text-[14px] font-semibold text-[#352F46]">

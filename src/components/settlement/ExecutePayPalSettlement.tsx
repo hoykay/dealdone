@@ -308,7 +308,7 @@ export default function ExecutePayPalSettlement({
     status === "verifying";
 
   let buttonText =
-    "Execute settlement via PayPal";
+  `Execute $${settlementAmount.toLocaleString()} via PayPal`;
 
   if (status === "creating") {
     buttonText = "Opening PayPal…";

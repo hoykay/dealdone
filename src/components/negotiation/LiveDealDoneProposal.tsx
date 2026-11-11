@@ -204,8 +204,8 @@ export default function LiveDealDoneProposal() {
       <div className="mt-5 rounded-[10px] bg-white/80 p-3">
         <div className="flex items-center justify-between text-[12px]">
           <span className="text-[#837C8C]">
-            PayPal capture
-          </span>
+  Planned PayPal capture
+</span>
 
           <span className="font-semibold text-[#262038]">
             ${money(settlement)}
@@ -214,8 +214,8 @@ export default function LiveDealDoneProposal() {
 
         <div className="mt-2 flex items-center justify-between text-[12px]">
           <span className="text-[#837C8C]">
-            Authorization release
-          </span>
+  Planned authorization release
+</span>
 
           <span className="font-semibold text-[#E14999]">
             ${money(release)}
@@ -226,8 +226,8 @@ export default function LiveDealDoneProposal() {
       <div className="mt-3 rounded-[9px] bg-[#EAF8F0] px-3 py-2">
         <p className="text-[10px] font-semibold text-[#21865A]">
           {negotiatedSettlement !== null
-            ? "✓ Agreement loaded from DealDone's server-authoritative settlement record"
-            : "✓ Proposal calculated from validated evidence"}
+  ? "✓ Agreement verified and ready for human approval"
+  : "✓ Proposal calculated from validated evidence"}
         </p>
       </div>
 
